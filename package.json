@@ -1,0 +1,26 @@
+{
+  "name": "autoapply.ai",
+  "version": "1.0.0",
+  "description": "An automation tool to carefully select job positions from career websites, based on experience and requirements and then carefully select a CV and apply for the position.",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SambaranBanerjee/AutoApply.AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SambaranBanerjee/AutoApply.AI/issues"
+  },
+  "homepage": "https://github.com/SambaranBanerjee/AutoApply.AI#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.1"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.0"
+  }
+}
