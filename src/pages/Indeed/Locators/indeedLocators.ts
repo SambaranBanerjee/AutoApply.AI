@@ -19,6 +19,10 @@ export class IndeedLocators {
         return this.page.getByRole("combobox", { name: "Edit location" });
     }
 
+    cookieButton() : Locator {
+        return this.page.getByRole('button', { name: 'Accept All Cookies' })
+    }
+
     jobCards(): Locator {
         return this.page.locator('.job_seen_beacon')
     }
@@ -33,5 +37,9 @@ export class IndeedLocators {
 
     jobCardLocation(card: Locator): Locator {
         return card.locator('[data-testid="text-location"]');
+    }
+
+    jobDescription() : Locator{
+        return this.page.locator('#jobDescriptionText');
     }
 }

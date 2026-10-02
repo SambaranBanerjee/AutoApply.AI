@@ -1,3 +1,4 @@
+import { extractMatchingKeywords, hasMatchingKeyword } from "../../helper/keywords";
 import { IndeedLocators } from "./Locators/indeedLocators"
 import { Page } from "@playwright/test"
 
@@ -5,6 +6,7 @@ export interface JobCardData {
     title: string;
     company: string;
     url: string;
+    matchedKeywords: string[];
 }
 
 export class IndeedFunctions {
@@ -25,35 +27,52 @@ export class IndeedFunctions {
     }
 
     async searchJob(jobTitle:string) : Promise<void> {
-        const searchInput = this.locators.searchInput()
+        const searchInput = this.locators.searchInput();
         await searchInput.fill(jobTitle);
-        await this.locators.findJobsButton().click()
+        await this.locators.findJobsButton().click();
         await this.page.waitForLoadState("domcontentloaded");
+        await this.locators.cookieButton().click();
     }
 
-    async scrapeJobCards(): Promise<JobCardData[]> {
+    async scrapeFilteredJobCards() : Promise<JobCardData[]> {
         const cards = this.locators.jobCards();
-        await cards.first().waitFor({ state : "visible"});
-       
+        await cards.first().waitFor({ state : "visible" });
+
         const count = await cards.count();
-        const scrapedJobs: JobCardData[] = [];
-        
-        for (let index = 0; index < count; index++) {
-            const card = cards.nth(index);
-            const titleElement = this.locators.jobCardTitle(card);
+        const qualifiedJobs : JobCardData[] = [];
+        const descriptionLocator = this.locators.jobDescription();
+
+        for (let i = 0; i < count; i++) {
+            const card = cards.nth(i);
+            const titleCard = this.locators.jobCardTitle(card);
+
+            if ((await titleCard.count()) === 0) continue;
+
+            await titleCard.click();
+
+            await descriptionLocator.waitFor({ state : "visible"});
+            const descriptionText = await descriptionLocator.innerText();
+
+            if (!hasMatchingKeyword(descriptionText)) {
+                continue;
+            }
+
             const companyElement = this.locators.jobCardCompany(card);
-
-            if (await titleElement.count() === 0) continue;
-
-            const title = (await titleElement.innerText()).trim();
+            const title = (await titleCard.innerText()).trim();
             const company = (await companyElement.innerText()).trim();
-            const relativeHref = await titleElement.getAttribute("href");
-            
+            const relativeHref = await titleCard.getAttribute("href");
             const url = relativeHref ? new URL(relativeHref, this.page.url()).toString() : "";
 
-            scrapedJobs.push({ title, company, url});
+            const matchedKeywords = extractMatchingKeywords(descriptionText);
+
+            qualifiedJobs.push({
+                title,
+                company,
+                url,
+                matchedKeywords,
+            });
         }
-        
-        return scrapedJobs;
+
+        return qualifiedJobs;
     }
 }
