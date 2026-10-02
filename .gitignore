@@ -9,3 +9,4 @@ node_modules/
 /playwright/.auth/
 
 .early.coverage
+.browser-profile/

@@ -18,7 +18,7 @@
   "homepage": "https://github.com/SambaranBanerjee/AutoApply.AI#readme",
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/node": "^26.6.1"
+    "@types/node": "^26.6.3"
   },
   "dependencies": {
     "dotenv": "^18.0.0"

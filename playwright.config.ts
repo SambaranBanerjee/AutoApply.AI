@@ -1,4 +1,4 @@
-import { devices, defineConfig } from "@playwright/test"
+import { devices, defineConfig } from "@playwright/test";
 
 export default defineConfig({
   timeout: 60000,
@@ -7,6 +7,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        channel: "chrome",
         headless: false, // Cloudflare blocks headless mode almost immediately
         viewport: { width: 1280, height: 720 },
         launchOptions: {
