@@ -18,9 +18,15 @@
   "homepage": "https://github.com/SambaranBanerjee/AutoApply.AI#readme",
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/node": "^26.6.3"
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.3",
+    "@types/pdf-parse": "^1.1.5"
   },
   "dependencies": {
-    "dotenv": "^18.0.0"
+    "dotenv": "^18.0.0",
+    "express": "^5.3.0",
+    "multer": "^2.4.0",
+    "pdf-parse": "^2.4.5"
   }
 }
