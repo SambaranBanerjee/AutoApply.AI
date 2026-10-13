@@ -13,7 +13,7 @@ async function run(){
     };
 
     try {
-        const rawData = await hirist.searchJobs("sde", 0, 20);
+        const rawData = await hirist.searchJobs("Python", 0, 20);
         const response = rawData as HiristSearchResponse;
 
         const matchedResults = await JobMatcher.matchAll(response.data, userProfile, 40);

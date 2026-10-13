@@ -28,14 +28,14 @@ export class HiristService {
             this.baseUrl,
             {
                 params: {
-                query,
-                page,
+                query : query,
+                page: page,
                 posting: 0,
                 industry: "",
-                size,
+                size: size,
                 ref: "homepage",
                 referenceText: "homepage",
-                refPool: JSON.stringify({ ref: "homepage" }),
+                refPool: '{"ref":"homepage"}',
             },
         });
     }
