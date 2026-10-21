@@ -1,0 +1,66 @@
+import { Request, Response } from "express";
+import { ResumeParser } from "../services/resume/resumeParser";
+import { PortalSelection } from "../types/provider";
+import { ExperienceMode, JobMatcher, UserProfile } from "../services/matcher/jobMatcher";
+import { ProviderFactory } from "../services/providers/provider.factory";
+
+const VALID_PORTALS: Set<string> = new Set(["hirist", "remotive", "arbeitnow", "all"]);
+
+export class MatchController {
+    static async handleResumeMatch(req: Request, res: Response): Promise<void> {
+        try {
+            if (!req.file) {
+                res.status(400).json({ error: "Please upload a resume file (PDF)." });
+                return;
+            }
+
+            const rawText = await ResumeParser.extractTextFromBuffer(req.file.buffer);
+            const ephemeralKeywords = ResumeParser.extractKeywords(rawText);
+
+            if (ephemeralKeywords.length === 0) {
+                res.status(422).json({
+                    message: "No technical keywords identified in the uploaded resume.",
+                });
+                return;
+            }
+            
+            const rawPortal = (req.body.portal || "all").toString().toLowerCase();
+            const portal: PortalSelection = VALID_PORTALS.has(rawPortal) ? (rawPortal as PortalSelection) : "all";
+
+            const userExp = Number(req.body.yearsOfExperience) || 0;
+            const preferredLocation = req.body.location ? [String(req.body.location)] : [];
+            const remoteOnly = req.body.remoteOnly === "true";
+            const experienceMode = (req.body.experienceMode as ExperienceMode) || "moderate";
+
+            const userProfile: UserProfile = {
+                skills: ephemeralKeywords,
+                yearsOfExperience: userExp,
+                preferredLocations: preferredLocation,
+                remoteOnly,
+                experienceMode,
+            };
+
+            const jobs = await ProviderFactory.search(portal, {
+                keywords: ephemeralKeywords,
+                userExperience: userExp,
+                locations: preferredLocation,
+                remoteOnly,
+                limit: 20,
+            });
+
+            const matchedJobs = JobMatcher.matchAll(jobs, userProfile, 30);
+
+            res.json({
+                portalSelected: portal,
+                extractedKeywords: ephemeralKeywords,
+                totalJobsFetched: jobs.length,
+                totalQualifiedMatches: matchedJobs.length,
+                results: matchedJobs,
+            });
+        }
+        catch (error) {
+            console.error("[MatchController] Error executing match:", error);
+            res.status(500).json({ error: "Internal server error while evaluating resume." });
+        }
+    }
+}
