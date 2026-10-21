@@ -33,15 +33,22 @@ export class HiristProvider extends BaseJobProvider {
       queryKeywords.push("Junior");
     }
 
-    const searchPromises = queryKeywords.map((kw) =>
-      this.client.get<HiristSearchResponse>(this.baseUrl, {
-        params: {
-          query: kw,
-          page: 0,
-          size: options.limit || 20,
-        },
-      })
-    );
+    const pagesToFetch = Math.max(1, Math.min(options.pageDepth || 1, 5)); // Bound between 1 and 5
+    const searchPromises: Promise<HiristSearchResponse>[] = [];
+
+    for (const kw of queryKeywords) {
+      for (let page = 0; page < pagesToFetch; page++) {
+        searchPromises.push(
+          this.client.get<HiristSearchResponse>(this.baseUrl, {
+            params: {
+              query: kw,
+              page: page,
+              size: options.limit || 20,
+            },
+          })
+        );
+      }
+    }
 
     const settledResults = await Promise.allSettled(searchPromises);
     const rawJobs: HiristJobItem[] = [];
@@ -52,21 +59,29 @@ export class HiristProvider extends BaseJobProvider {
       }
     }
 
-    const mappedJobs: StandardJob[] = rawJobs.map((item) => ({
-      id: `hirist-${item.id}`,
-      sourcePortal: "hirist",
-      title: item.title,
-      company: item.companyData?.companyName || "Unknown",
-      url: item.jobDetailUrl,
-      minExp: item.min ?? 0,
-      maxExp: item.max ?? 0,
-      locations: (item.locations || []).map((loc) => loc.name),
-      isRemote: item.workFromHome === 1,
-      tags: (item.tags || []).map((tag) => ({
-        name: tag.name,
-        isMandatory: tag.isMandatory,
-      })),
-    }));
+    const mappedJobs: StandardJob[] = rawJobs.map((item) => {
+    const isIntern = /\b(intern|internship|trainee)\b/i.test(item.title);
+    
+    return {
+        id: `hirist-${item.id}`,
+        sourcePortal: "hirist",
+        title: item.title,
+        company: item.companyData?.companyName || "Unknown",
+        url: item.jobDetailUrl,
+        minExp: item.min ?? 0,
+        maxExp: item.max ?? 0,
+        locations: (item.locations || []).map((loc) => loc.name),
+        isRemote: item.workFromHome === 1,
+        jobType: isIntern ? "internship" : "full-time",
+        minSalary: item.minSal > 0 ? item.minSal : undefined,
+        maxSalary: item.maxSal > 0 ? item.maxSal : undefined,
+        currency: "INR",
+        tags: (item.tags || []).map((tag) => ({
+          name: tag.name,
+          isMandatory: tag.isMandatory,
+        })),
+      };
+    });
 
     return this.deduplicateJobs(mappedJobs);
   }

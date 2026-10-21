@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { ResumeParser } from "../services/resume/resumeParser";
 import { PortalSelection } from "../types/provider";
-import { ExperienceMode, JobMatcher, UserProfile } from "../services/matcher/jobMatcher";
+import { UserProfile, ExperienceMode, JobMatchResult } from "../types/matcher";
 import { ProviderFactory } from "../services/providers/provider.factory";
+import { JobMatcher } from "../services/matcher/jobMatcher";
 
 const VALID_PORTALS: Set<string> = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 
@@ -32,19 +33,31 @@ export class MatchController {
             const remoteOnly = req.body.remoteOnly === "true";
             const experienceMode = (req.body.experienceMode as ExperienceMode) || "moderate";
 
+            const targetRole = req.body.roleTitle ? String(req.body.roleTitle) : undefined;
+            const jobType = req.body.jobType ? (String(req.body.jobType) as any) : "any";
+            const minSalary = req.body.minSalary ? Number(req.body.minSalary) : undefined;
+            const includeUndisclosedSalary = req.body.includeUndisclosedSalary !== "false";
+
             const userProfile: UserProfile = {
                 skills: ephemeralKeywords,
                 yearsOfExperience: userExp,
                 preferredLocations: preferredLocation,
                 remoteOnly,
                 experienceMode,
+                targetRole,
+                jobType,
+                minSalary,
+                includeUndisclosedSalary,
             };
+
+            const pageDepth = Math.max(1, Math.min(Number(req.body.pageDepth) || 1, 4));
 
             const jobs = await ProviderFactory.search(portal, {
                 keywords: ephemeralKeywords,
                 userExperience: userExp,
                 locations: preferredLocation,
                 remoteOnly,
+                pageDepth,
                 limit: 20,
             });
 

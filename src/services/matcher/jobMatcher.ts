@@ -1,33 +1,5 @@
-import { StandardJob } from "../../types/job";
-
-export type ExperienceMode = "strict" | "moderate" | "any";
-
-export interface UserProfile {
-  skills: string[];
-  yearsOfExperience: number;
-  preferredLocations?: string[];
-  remoteOnly?: boolean;
-  experienceMode?: ExperienceMode;
-}
-
-export interface JobMatchResult {
-  job: {
-    id: string;
-    sourcePortal: string;
-    title: string;
-    company: string;
-    url: string;
-    experienceRange: string;
-    minExp: number;
-    maxExp: number;
-    locations: string[];
-    isRemote: boolean;
-  };
-  score: number;
-  matchedSkills: string[];
-  missingMandatorySkills: string[];
-  isExperienceMatch: boolean;
-}
+import { EmploymentType, StandardJob } from "../../types/job";
+import { UserProfile, ExperienceMode, JobMatchResult } from "../../types/matcher";
 
 function normalizeSkill(name: string): string {
   return name.toLowerCase().replace(/[\s\-_.]/g, "");
@@ -61,6 +33,91 @@ function doesSkillMatch(jobTag: string, userSkills: Set<string>): boolean {
   return false;
 }
 
+function inferExperienceFromTitle(title: string, currentMin: number, currentMax: number): {min: number, max: number} {
+  const lowerTitle = title.toLowerCase();
+
+  if (currentMin > 0) {
+    return { min: currentMin, max: currentMax };
+  }
+
+  if (/\b(senior|sr\.?|lead|staff|principal|architect|director|head of)\b/i.test(lowerTitle)) {
+    return { min: 4, max: Math.max(8, currentMax) };
+  }
+
+  if (/\b(junior|jr\.?|intern|internship|graduate|associate|trainee|entry level)\b/i.test(lowerTitle)) {
+    return { min: 0, max: 2 };
+  }
+
+  return { min: 1, max: currentMax}
+}
+
+function isTechnicalRole(title: string): boolean {
+  return /\b(developer|engineer|programmer|full stack|frontend|backend|software|web|coder)\b/i.test(title);
+}
+
+function matchesTargetRole(title: string, tags: { name: string }[], targetRole?: string): boolean {
+  if (!targetRole || targetRole.trim() === "" || targetRole.toLowerCase() === "any") {
+    return true;
+  }
+
+  const role = targetRole.toLowerCase().trim();
+  const titleLower = title.toLowerCase();
+
+  // Role track checks
+  if (role.includes("front")) {
+    return (
+      titleLower.includes("front") ||
+      titleLower.includes("react") ||
+      titleLower.includes("ui") ||
+      titleLower.includes("web developer")
+    );
+  }
+  if (role.includes("back")) {
+    return (
+      titleLower.includes("back") ||
+      titleLower.includes("node") ||
+      titleLower.includes("python") ||
+      titleLower.includes("java") ||
+      titleLower.includes("api")
+    );
+  }
+  if (role.includes("full") || role.includes("fullstack")) {
+    return (
+      titleLower.includes("full stack") ||
+      titleLower.includes("fullstack") ||
+      titleLower.includes("full-stack")
+    );
+  }
+  if (role.includes("mobile") || role.includes("android") || role.includes("ios")) {
+    return (
+      titleLower.includes("mobile") ||
+      titleLower.includes("react native") ||
+      titleLower.includes("android") ||
+      titleLower.includes("ios") ||
+      titleLower.includes("flutter")
+    );
+  }
+
+  return (
+    titleLower.includes(role) ||
+    tags.some((t) => t.name.toLowerCase().includes(role))
+  );
+}
+
+function matchesJobType(
+  jobType?: string,
+  targetJobType?: string
+): boolean {
+  if (!targetJobType || targetJobType.toLowerCase() === "any") {
+    return true;
+  }
+  if (!jobType) {
+    // If job does not explicitly declare a type, keep it rather than aggressively dropping
+    return true;
+  }
+  return jobType.toLowerCase() === targetJobType.toLowerCase();
+}
+
 export class JobMatcher {
   static isExperienceCompatible(
     userExp: number,
@@ -87,8 +144,6 @@ export class JobMatcher {
 
     // Gathers all searchable tokens from tags, title, and description
     const tagsToEvaluate = [...(job.tags || [])];
-
-    // If tags are sparse, check if the job title or description mentions any user skills
     const titleAndDesc = `${job.title} ${job.description || ""}`.toLowerCase();
     
     for (const skill of profile.skills) {
@@ -139,6 +194,7 @@ export class JobMatcher {
           maxExp: job.maxExp,
           locations: job.locations,
           isRemote: job.isRemote,
+          jobType: job.jobType,
         },
         score: 0,
         matchedSkills: [],
@@ -166,11 +222,21 @@ export class JobMatcher {
       skillScore = Math.max(10, skillScore - missingMandatorySkills.length * 15);
     }
 
+    if (!isTechnicalRole(job.title)) {
+      skillScore = Math.round(skillScore * 0.4);
+    }
+
+    const { min: inferredMin, max: inferredMax } = inferExperienceFromTitle(
+      job.title,
+      job.minExp,
+      job.maxExp
+    );
+
     const expMode = profile.experienceMode || "moderate";
     const isExperienceMatch = this.isExperienceCompatible(
       profile.yearsOfExperience,
-      job.minExp,
-      job.maxExp,
+      inferredMin,
+      inferredMax,
       expMode
     );
 
@@ -181,11 +247,12 @@ export class JobMatcher {
         title: job.title,
         company: job.company,
         url: job.url,
-        experienceRange: `${job.minExp} - ${job.maxExp} yrs`,
-        minExp: job.minExp,
-        maxExp: job.maxExp,
+        experienceRange: `${inferredMin} - ${inferredMax} yrs`,
+        minExp: inferredMin,
+        maxExp: inferredMax,
         locations: job.locations,
         isRemote: job.isRemote,
+        jobType: job.jobType,
       },
       score: skillScore,
       matchedSkills,
@@ -206,6 +273,17 @@ export class JobMatcher {
       .filter((result) => {
         // Discarding any job with zero skill match or below threshold
         if (result.score < minScoreThreshold || result.matchedSkills.length === 0) {
+          return false;
+        }
+
+        const originalJob = jobs.find((j) => j.id === result.job.id);
+        if (!originalJob) return false;
+
+        if (!matchesTargetRole(originalJob.title, originalJob.tags || [], profile.targetRole)) {
+          return false;
+        }
+
+        if (!matchesJobType(result.job.jobType, profile.jobType)) {
           return false;
         }
 

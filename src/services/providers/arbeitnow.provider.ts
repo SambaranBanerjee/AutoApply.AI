@@ -32,46 +32,58 @@ export class ArbeitnowProvider extends BaseJobProvider {
   }
 
   async searchJobs(options: SearchOptions): Promise<StandardJob[]> {
-    try {
-      const response = await this.client.get<ArbeitnowApiResponse>(this.baseUrl);
-      const rawJobs = response.data || [];
+    const pagesToFetch = Math.max(1, Math.min(options.pageDepth || 1, 3));
+    const pagePromises: Promise<ArbeitnowApiResponse>[] = [];
 
-      const keywordSet = new Set(options.keywords.map((k) => k.toLowerCase()));
-
-      const mappedJobs: StandardJob[] = rawJobs
-        .map((item) => {
-          const cleanDesc = this.stripHtml(item.description);
-          return {
-            id: `arbeitnow-${item.slug}`,
-            sourcePortal: "arbeitnow" as SupportedPortal,
-            title: item.title,
-            company: item.company_name,
-            url: item.url,
-            description: cleanDesc,
-            minExp: 0,
-            maxExp: 10,
-            locations: item.location ? [item.location] : ["Remote"],
-            isRemote: item.remote,
-            tags: (item.tags || []).map((tag) => ({
-              name: tag,
-              isMandatory: false,
-            })),
-          };
+    for (let page = 1; page <= pagesToFetch; page++) {
+      pagePromises.push(
+        this.client.get<ArbeitnowApiResponse>(this.baseUrl, {
+          params: { page },
         })
-        .filter((job) => {
-          const titleMatches = options.keywords.some((kw) =>
-            job.title.toLowerCase().includes(kw.toLowerCase())
-          );
-          const tagMatches = job.tags.some((tag) =>
-            keywordSet.has(tag.name.toLowerCase())
-          );
-          return titleMatches || tagMatches;
-        });
-
-      return this.deduplicateJobs(mappedJobs);
-    } catch (error) {
-      console.error("[ArbeitnowProvider] Failed to fetch listings:", error);
-      return [];
+      );
     }
+
+    const settledResults = await Promise.allSettled(pagePromises);
+    const rawJobs: ArbeitnowJob[] = [];
+
+    for (const res of settledResults) {
+      if (res.status === "fulfilled" && Array.isArray(res.value?.data)) {
+        rawJobs.push(...res.value.data);
+      }
+    }
+
+    const keywordSet = new Set(options.keywords.map((k) => k.toLowerCase()));
+
+    const mappedJobs: StandardJob[] = rawJobs
+      .map((item) => {
+        const cleanDesc = this.stripHtml(item.description);
+        return {
+          id: `arbeitnow-${item.slug}`,
+          sourcePortal: "arbeitnow" as SupportedPortal,
+          title: item.title,
+          company: item.company_name,
+          url: item.url,
+          description: cleanDesc,
+          minExp: 0,
+          maxExp: 10,
+          locations: item.location ? [item.location] : ["Remote"],
+          isRemote: item.remote,
+          tags: (item.tags || []).map((tag) => ({
+            name: tag,
+            isMandatory: false,
+          })),
+        };
+      })
+      .filter((job) => {
+        const titleMatches = options.keywords.some((kw) =>
+          job.title.toLowerCase().includes(kw.toLowerCase())
+        );
+        const tagMatches = job.tags.some((tag) =>
+          keywordSet.has(tag.name.toLowerCase())
+        );
+        return titleMatches || tagMatches;
+      });
+
+    return this.deduplicateJobs(mappedJobs);
   }
 }

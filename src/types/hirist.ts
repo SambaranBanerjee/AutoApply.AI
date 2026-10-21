@@ -17,6 +17,8 @@ export interface HiristJobItem {
   jobDetailUrl: string;
   workFromHome: number; // 0 or 1
   tags: HiristTag[];
+  minSal: number;
+  maxSal: number;
   locations: HiristLocation[];
   companyData?: {
     companyName?: string;
