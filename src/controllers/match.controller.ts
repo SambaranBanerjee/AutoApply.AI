@@ -4,6 +4,8 @@ import { PortalSelection } from "../types/provider";
 import { UserProfile, ExperienceMode, JobMatchResult } from "../types/matcher";
 import { ProviderFactory } from "../services/providers/provider.factory";
 import { JobMatcher } from "../services/matcher/jobMatcher";
+import { EmploymentType } from "../types/job";
+import { csvExporter } from "../services/export/csvExporter";
 
 const VALID_PORTALS: Set<string> = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 
@@ -34,9 +36,9 @@ export class MatchController {
             const experienceMode = (req.body.experienceMode as ExperienceMode) || "moderate";
 
             const targetRole = req.body.roleTitle ? String(req.body.roleTitle) : undefined;
-            const jobType = req.body.jobType ? (String(req.body.jobType) as any) : "any";
+            const jobType = req.body.jobType ? (String(req.body.jobType) as EmploymentType) : undefined;
             const minSalary = req.body.minSalary ? Number(req.body.minSalary) : undefined;
-            const includeUndisclosedSalary = req.body.includeUndisclosedSalary !== "false";
+            const pageDepth = Math.max(1, Math.min(Number(req.body.pageDepth) || 1, 4));
 
             const userProfile: UserProfile = {
                 skills: ephemeralKeywords,
@@ -47,10 +49,7 @@ export class MatchController {
                 targetRole,
                 jobType,
                 minSalary,
-                includeUndisclosedSalary,
             };
-
-            const pageDepth = Math.max(1, Math.min(Number(req.body.pageDepth) || 1, 4));
 
             const jobs = await ProviderFactory.search(portal, {
                 keywords: ephemeralKeywords,
@@ -62,6 +61,20 @@ export class MatchController {
             });
 
             const matchedJobs = JobMatcher.matchAll(jobs, userProfile, 30);
+
+            const requestedFormat = (req.body.format || req.query.format || "json")
+                .toString()
+                .toLowerCase();
+
+            if (requestedFormat === "csv") {
+                const csvContent = csvExporter.generateCsv(matchedJobs);
+                const fileName = `job_matches_${Date.now()}.csv`;
+
+                res.setHeader("Content-Type", "text/csv; charset=utf-8");
+                res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+                res.status(200).send(csvContent);
+                return;
+            }
 
             res.json({
                 portalSelected: portal,
