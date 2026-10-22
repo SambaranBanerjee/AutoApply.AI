@@ -4,7 +4,7 @@ export type ExperienceMode = "strict" | "moderate" | "any";
 
 export interface UserProfile {
   skills: string[];
-  yearsOfExperience: number | Number;
+  yearsOfExperience: number;
   preferredLocations?: string[];
   remoteOnly?: boolean;
   experienceMode?: ExperienceMode;

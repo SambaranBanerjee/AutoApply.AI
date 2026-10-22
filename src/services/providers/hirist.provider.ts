@@ -29,10 +29,12 @@ export class HiristProvider extends BaseJobProvider {
   async searchJobs(options: SearchOptions): Promise<StandardJob[]> {
     const queryKeywords = options.keywords.slice(0, 4);
 
-    if (options.userExperience !== undefined && options.userExperience <= 1 && !queryKeywords.includes("Junior")) {
+    const userExp = options.userExperience !== undefined ? Number(options.userExperience) : undefined;
+
+    if (userExp !== undefined && userExp <= 1 && !queryKeywords.includes("Junior")) {
       queryKeywords.push("Junior");
     }
-
+    
     const pagesToFetch = Math.max(1, Math.min(options.pageDepth || 1, 5)); // Bound between 1 and 5
     const searchPromises: Promise<HiristSearchResponse>[] = [];
 

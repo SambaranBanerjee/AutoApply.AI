@@ -27,7 +27,7 @@ export class MatchController {
                 return;
             }
             
-            const detectedExp = ResumeParser.extractExperience(rawText);
+            const detectedExp: number = Number(ResumeParser.extractExperience(rawText)) || 0;
             const userExp = req.body.yearsOfExperience !== undefined && req.body.yearsOfExperience !== ""
                 ? Number(req.body.yearsOfExperience)
                 : detectedExp;

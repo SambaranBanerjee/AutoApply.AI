@@ -251,8 +251,10 @@ export class JobMatcher {
     );
 
     const expMode = profile.experienceMode || "moderate";
+    const userYears = Number(profile.yearsOfExperience);
+
     const isExperienceMatch = this.isExperienceCompatible(
-      profile.yearsOfExperience,
+      userYears,
       inferredMin,
       inferredMax,
       expMode
