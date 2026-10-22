@@ -1,7 +1,10 @@
 import { EmploymentType, StandardJob } from "../../types/job";
 import { UserProfile, ExperienceMode, JobMatchResult } from "../../types/matcher";
 
-function normalizeSkill(name: string): string {
+function normalizeSkill(name?: string | null): string {
+  if (!name || typeof name !== "string") {
+    return "";
+  }
   return name.toLowerCase().replace(/[\s\-_.]/g, "");
 }
 
@@ -10,6 +13,7 @@ function doesSkillMatch(jobTag: string, userSkills: Set<string>): boolean {
 
   for (const userSkill of userSkills) {
     const normUser = normalizeSkill(userSkill);
+    if (!normUser) continue;
     if (normTag === normUser || normTag.includes(normUser) || normUser.includes(normTag)) {
       return true;
     }
@@ -55,13 +59,13 @@ function isTechnicalRole(title: string): boolean {
   return /\b(developer|engineer|programmer|full stack|frontend|backend|software|web|coder)\b/i.test(title);
 }
 
-function matchesTargetRole(title: string, tags: { name: string }[], targetRole?: string): boolean {
+function matchesTargetRole(title: string = "", tags: { name?: string }[] = [], targetRole?: string): boolean {
   if (!targetRole || targetRole.trim() === "" || targetRole.toLowerCase() === "any") {
     return true;
   }
 
   const role = targetRole.toLowerCase().trim();
-  const titleLower = title.toLowerCase();
+  const titleLower = (title || "").toLowerCase();
 
   // Role track checks
   if (role.includes("front")) {
@@ -100,7 +104,7 @@ function matchesTargetRole(title: string, tags: { name: string }[], targetRole?:
 
   return (
     titleLower.includes(role) ||
-    tags.some((t) => t.name.toLowerCase().includes(role))
+    tags.some((t) => t && typeof t.name === "string" && t.name.toLowerCase().includes(role))
   );
 }
 
@@ -140,17 +144,30 @@ export class JobMatcher {
   }
 
   static evaluate(job: StandardJob, profile: UserProfile): JobMatchResult {
-    const userSkillSet = new Set(profile.skills.map((s) => s.trim().toLowerCase()));
+    const userSkillSet = new Set(profile.skills.filter(Boolean).map((s) => s.trim().toLowerCase()));
+
+    const rawTags = (job.tags || [])
+      .map((t: any) => {
+        if (typeof t === "string") return { name: t, isMandatory: false };
+        if (t && typeof t.name === "string") return t;
+        return null;
+      })
+      .filter((t): t is { name: string; isMandatory?: boolean } => Boolean(t && t.name));
 
     // Gathers all searchable tokens from tags, title, and description
-    const tagsToEvaluate = [...(job.tags || [])];
+    const tagsToEvaluate = [...rawTags];
     const titleAndDesc = `${job.title} ${job.description || ""}`.toLowerCase();
     
     for (const skill of profile.skills) {
       const escaped = skill.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
       const regex = new RegExp(`\\b${escaped}\\b`, "i");
+      
       if (regex.test(titleAndDesc)) {
-        if (!tagsToEvaluate.some((t) => normalizeSkill(t.name) === normalizeSkill(skill))) {
+        const normSkill = normalizeSkill(skill);
+        const alreadyExists = tagsToEvaluate.some(
+          (t) => normalizeSkill(t.name) === normSkill
+        );
+        if (!alreadyExists) {
           tagsToEvaluate.push({ name: skill, isMandatory: false });
         }
       }
@@ -163,6 +180,7 @@ export class JobMatcher {
     let mandatoryMatchedCount = 0;
 
     for (const tag of tagsToEvaluate) {
+      if (!tag || !tag.name) continue;
       const isMatched = doesSkillMatch(tag.name, userSkillSet);
 
       if (isMatched) {
@@ -192,14 +210,14 @@ export class JobMatcher {
           experienceRange: `${job.minExp} - ${job.maxExp} yrs`,
           minExp: job.minExp,
           maxExp: job.maxExp,
-          locations: job.locations,
-          isRemote: job.isRemote,
-          jobType: job.jobType,
+          locations: job.locations || [],
+          isRemote: Boolean(job.isRemote),
         },
         score: 0,
         matchedSkills: [],
         missingMandatorySkills,
         isExperienceMatch: false,
+        matchReason: "",
       };
     }
 
@@ -240,6 +258,23 @@ export class JobMatcher {
       expMode
     );
 
+    let matchReason = "";
+    if (matchedSkills.length > 0) {
+      const topSkills = matchedSkills.slice(0, 3).join(", ");
+      matchReason = `Aligns with your experience in ${topSkills}.`;
+      if (missingMandatorySkills.length === 0 && mandatoryTagCount > 0) {
+        matchReason += " Satisfies all mandatory stack requirements.";
+      } else if (missingMandatorySkills.length > 0) {
+        matchReason += ` Note: specifically requests ${missingMandatorySkills.slice(0, 2).join(", ")}.`;
+      }
+    } else {
+      matchReason = "General profile overlap based on role track.";
+    }
+
+    if (isExperienceMatch) {
+      matchReason += ` Experience range (${inferredMin}-${inferredMax} yrs) is well-suited for your profile.`;
+    }
+
     return {
       job: {
         id: job.id,
@@ -250,14 +285,14 @@ export class JobMatcher {
         experienceRange: `${inferredMin} - ${inferredMax} yrs`,
         minExp: inferredMin,
         maxExp: inferredMax,
-        locations: job.locations,
-        isRemote: job.isRemote,
-        jobType: job.jobType,
+        locations: job.locations || [],
+        isRemote: Boolean(job.isRemote),
       },
       score: skillScore,
       matchedSkills,
       missingMandatorySkills,
       isExperienceMatch,
+      matchReason,
     };
   }
 
@@ -280,10 +315,6 @@ export class JobMatcher {
         if (!originalJob) return false;
 
         if (!matchesTargetRole(originalJob.title, originalJob.tags || [], profile.targetRole)) {
-          return false;
-        }
-
-        if (!matchesJobType(result.job.jobType, profile.jobType)) {
           return false;
         }
 

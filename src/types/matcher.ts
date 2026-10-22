@@ -28,10 +28,10 @@ export interface JobMatchResult {
     maxExp: number;
     locations: string[];
     isRemote: boolean;
-    jobType?: EmploymentType;
   };
   score: number;
   matchedSkills: string[];
   missingMandatorySkills: string[];
   isExperienceMatch: boolean;
+  matchReason: string;
 }

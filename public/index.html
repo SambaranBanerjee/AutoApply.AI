@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoApply.AI - Job Discovery & Alignment Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            navy: {
+              950: '#070a13',
+              900: '#0d1322',
+              850: '#11182c',
+              800: '#1b243b',
+              700: '#283556'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-navy-950 text-slate-200 font-sans antialiased min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    
+    <!-- Top Bar -->
+    <header class="flex items-center justify-between pb-5 border-b border-navy-800">
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            AutoApply<span class="text-violet-500">.AI</span>
+          </h1>
+          <span class="text-xs px-2 py-0.5 rounded bg-navy-850 border border-navy-700 text-slate-400 font-medium">v1.2</span>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+          Resume-to-Job Matching Engine with Explicit Fit Rationales
+        </p>
+      </div>
+
+      <!-- Compact Status Indicator -->
+      <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-navy-900 border border-navy-800 text-[11px] font-medium text-slate-300">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+        <span>Service Ready</span>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-7">
+      
+      <!-- Left Column: Controls (5 cols) -->
+      <div class="lg:col-span-5 space-y-5">
+        <form id="matchForm" class="space-y-5">
+
+          <!-- Section 1: Resume Upload -->
+          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-navy-800/80 pb-2.5">
+              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice text-violet-400 text-xs"></i> 1. Resume Document
+              </h2>
+              <span class="text-[11px] text-slate-500">In-Memory Ephemeral</span>
+            </div>
+
+            <div id="dropzone" class="border-2 border-dashed border-navy-700 hover:border-violet-500/80 rounded-lg p-5 text-center cursor-pointer transition bg-navy-950/60 group">
+              <input type="file" id="resumeInput" accept=".pdf" class="hidden" required />
+              
+              <!-- Empty State -->
+              <div id="emptyDropState" class="space-y-1.5">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-500 group-hover:text-violet-400 transition-colors"></i>
+                <p class="text-xs font-medium text-slate-300">Drop PDF resume here, or <span class="text-violet-400 underline">browse</span></p>
+                <p class="text-[11px] text-slate-500">Max size 5MB • Never saved to disk</p>
+              </div>
+
+              <!-- Selected File State -->
+              <div id="activeFileState" class="hidden flex items-center justify-between bg-navy-850 border border-navy-750 px-3 py-2 rounded-md text-left">
+                <div class="flex items-center gap-2.5 overflow-hidden pr-2">
+                  <i class="fa-solid fa-file-pdf text-rose-400 text-lg flex-shrink-0"></i>
+                  <div class="min-w-0">
+                    <p id="fileNameDisplay" class="text-xs font-medium text-slate-200 truncate">resume.pdf</p>
+                    <p id="fileSizeDisplay" class="text-[10px] text-slate-400">0 KB</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <button type="button" id="replaceFileBtn" class="text-[11px] text-slate-300 hover:text-white underline">Change</button>
+                  <button type="button" id="clearFileBtn" class="text-[11px] text-rose-400 hover:text-rose-300"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Job Preferences -->
+          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
+            <div class="border-b border-navy-800/80 pb-2.5">
+              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-violet-400 text-xs"></i> 2. Target Job Criteria
+              </h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3.5">
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Portal Platform</label>
+                <select id="portal" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
+                  <option value="all">All Portals (Aggregated)</option>
+                  <option value="hirist">Hirist (India Tech)</option>
+                  <option value="remotive">Remotive (Global Remote)</option>
+                  <option value="arbeitnow">Arbeitnow (EU / Global)</option>
+                </select>
+              </div>
+
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Role Track</label>
+                <select id="roleTitle" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
+                  <option value="">Any Technical Track</option>
+                  <option value="Full Stack">Full Stack</option>
+                  <option value="Frontend">Frontend / UI</option>
+                  <option value="Backend">Backend / API</option>
+                  <option value="Mobile">Mobile (React Native / iOS)</option>
+                </select>
+              </div>
+
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Years of Exp</label>
+                <input type="number" id="yearsOfExperience" value="1" min="0" max="25" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500" />
+              </div>
+
+              <div class="col-span-2 sm:col-span-1">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Location Preference</label>
+                <input type="text" id="location" placeholder="e.g. Bangalore, Remote" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500 placeholder:text-slate-600" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Search Settings -->
+          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
+            <div class="border-b border-navy-800/80 pb-2.5">
+              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <i class="fa-solid fa-gauge-high text-violet-400 text-xs"></i> 3. Search Precision
+              </h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Tolerance Mode</label>
+                <p class="text-[10px] text-slate-500 mb-1.5">Exp buffer flexibility</p>
+                <select id="experienceMode" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
+                  <option value="moderate" selected>Moderate (±2 yrs)</option>
+                  <option value="strict">Strict (Exact Fit)</option>
+                  <option value="any">Any (Unbounded)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Pagination Depth</label>
+                <p class="text-[10px] text-slate-500 mb-1.5">API page scans per query</p>
+                <select id="pageDepth" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
+                  <option value="1">1 Page (~20/kw)</option>
+                  <option value="2" selected>2 Pages (~40/kw)</option>
+                  <option value="3">3 Pages (~60/kw)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="space-y-2 pt-1">
+            <button type="submit" id="submitBtn" class="w-full bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-medium py-2.5 rounded-lg text-sm transition-all shadow-sm shadow-violet-950 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+              <span>Search & Analyze Matches</span>
+            </button>
+            <button type="button" id="exportBtn" class="w-full border border-navy-700 hover:bg-navy-850 text-slate-300 font-medium py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-file-csv text-slate-400"></i>
+              <span>Export Qualified Matches to CSV</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Parsed Skills Preview -->
+        <div id="skillsCard" class="hidden bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-slate-300">Identified Resume Stack</h3>
+            <span id="skillsCount" class="text-[11px] text-slate-500">0 skills</span>
+          </div>
+          <div id="skillsBadgeContainer" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Results Stream (7 cols) -->
+      <div class="lg:col-span-7 space-y-4">
+        <!-- Results Bar -->
+        <div class="flex items-center justify-between bg-navy-900 border border-navy-800 px-4 py-3 rounded-xl text-xs text-slate-400 shadow-sm">
+          <span id="resultsCount">Provide a resume and search criteria to begin</span>
+          <span id="searchStatus" class="hidden text-violet-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Running Match Pipelines...
+          </span>
+        </div>
+
+        <!-- Job Cards Container -->
+        <div id="resultsContainer" class="space-y-3.5">
+          <div class="bg-navy-900/60 border border-navy-800/80 p-12 text-center rounded-xl text-slate-500 text-xs space-y-2">
+            <i class="fa-solid fa-layer-group text-2xl text-slate-600 mb-1"></i>
+            <p>Your ranked job matches with fit rationales will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dropzone = document.getElementById("dropzone");
+    const resumeInput = document.getElementById("resumeInput");
+    const emptyDropState = document.getElementById("emptyDropState");
+    const activeFileState = document.getElementById("activeFileState");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const fileSizeDisplay = document.getElementById("fileSizeDisplay");
+    const replaceFileBtn = document.getElementById("replaceFileBtn");
+    const clearFileBtn = document.getElementById("clearFileBtn");
+    const matchForm = document.getElementById("matchForm");
+    const exportBtn = document.getElementById("exportBtn");
+    const resultsContainer = document.getElementById("resultsContainer");
+    const resultsCount = document.getElementById("resultsCount");
+    const searchStatus = document.getElementById("searchStatus");
+    const skillsCard = document.getElementById("skillsCard");
+    const skillsCount = document.getElementById("skillsCount");
+    const skillsBadgeContainer = document.getElementById("skillsBadgeContainer");
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function setFile(file) {
+      if (!file) return;
+      fileNameDisplay.textContent = file.name;
+      fileSizeDisplay.textContent = formatBytes(file.size);
+      emptyDropState.classList.add("hidden");
+      activeFileState.classList.remove("hidden");
+    }
+
+    function clearFile() {
+      resumeInput.value = "";
+      emptyDropState.classList.remove("hidden");
+      activeFileState.classList.add("hidden");
+    }
+
+    dropzone.addEventListener("click", (e) => {
+      if (e.target !== replaceFileBtn && e.target !== clearFileBtn && !clearFileBtn.contains(e.target)) {
+        resumeInput.click();
+      }
+    });
+
+    replaceFileBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      resumeInput.click();
+    });
+
+    clearFileBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearFile();
+    });
+
+    resumeInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        setFile(e.target.files[0]);
+      }
+    });
+
+    // Drag-and-drop support
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("border-violet-500");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("border-violet-500");
+    });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("border-violet-500");
+      if (e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].type.includes("pdf")) {
+        resumeInput.files = e.dataTransfer.files;
+        setFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function buildFormData(format = "json") {
+      const file = resumeInput.files[0];
+      if (!file) {
+        alert("Please attach a PDF resume file first.");
+        return null;
+      }
+      const formData = new FormData();
+      formData.append("resume", file);
+      formData.append("portal", document.getElementById("portal").value);
+      formData.append("roleTitle", document.getElementById("roleTitle").value);
+      formData.append("yearsOfExperience", document.getElementById("yearsOfExperience").value);
+      formData.append("experienceMode", document.getElementById("experienceMode").value);
+      formData.append("location", document.getElementById("location").value);
+      formData.append("pageDepth", document.getElementById("pageDepth").value);
+      formData.append("format", format);
+      return formData;
+    }
+
+    matchForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = buildFormData("json");
+      if (!formData) return;
+
+      searchStatus.classList.remove("hidden");
+      resultsContainer.innerHTML = "";
+
+      try {
+        const response = await fetch("/api/match-jobs", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
+        searchStatus.classList.add("hidden");
+
+        if (!response.ok) {
+          alert(data.error || data.message || "Failed to process matching request.");
+          return;
+        }
+
+        renderSkills(data.extractedKeywords || []);
+        renderResults(data.results || [], data.totalQualifiedMatches, data.totalJobsFetched);
+      } catch (err) {
+        searchStatus.classList.add("hidden");
+        alert("Network communication error.");
+        console.error(err);
+      }
+    });
+
+    exportBtn.addEventListener("click", async () => {
+      const formData = buildFormData("csv");
+      if (!formData) return;
+
+      try {
+        const response = await fetch("/api/match-jobs", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          alert("Failed to generate CSV export.");
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `job_matches_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        alert("Export error occurred.");
+      }
+    });
+
+    function renderSkills(skills) {
+      if (!skills.length) return;
+      skillsCard.classList.remove("hidden");
+      skillsCount.textContent = `${skills.length} detected`;
+      skillsBadgeContainer.innerHTML = skills
+        .map(s => `<span class="px-2 py-0.5 bg-navy-800 border border-navy-700 text-slate-300 text-[11px] rounded font-medium">${s}</span>`)
+        .join("");
+    }
+
+    function renderResults(results, matchedCount, totalFetched) {
+      resultsCount.textContent = `Showing ${matchedCount} qualified recommendations (${totalFetched} scanned)`;
+
+      if (results.length === 0) {
+        resultsContainer.innerHTML = `
+          <div class="bg-navy-900 border border-navy-800 p-8 text-center rounded-xl text-slate-400 text-xs">
+            No active positions satisfied your filter criteria. Consider switching tolerance mode to 'moderate' or 'any'.
+          </div>`;
+        return;
+      }
+
+      resultsContainer.innerHTML = results.map((item) => {
+        const job = item.job;
+        const scoreBg = item.score >= 80 ? "text-emerald-400 bg-emerald-950/60 border-emerald-800" :
+                        item.score >= 50 ? "text-sky-400 bg-sky-950/60 border-sky-800" :
+                        "text-amber-400 bg-amber-950/60 border-amber-800";
+
+        const matchedTags = item.matchedSkills.map(s =>
+          `<span class="px-2 py-0.5 bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-[11px] rounded">${s}</span>`
+        ).join("");
+
+        const missingTags = item.missingMandatorySkills.map(s =>
+          `<span class="px-2 py-0.5 bg-rose-950/40 border border-rose-800/60 text-rose-300 text-[11px] rounded line-through">${s}</span>`
+        ).join("");
+
+        return `
+          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 hover:border-navy-700 transition space-y-3.5 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-navy-800 text-slate-300 border border-navy-700 tracking-wider">
+                    ${job.sourcePortal}
+                  </span>
+                  <span class="text-xs text-sky-400/90 font-medium">
+                    ${job.locations.join(", ") || "Remote"}
+                  </span>
+                  ${job.isRemote ? '<span class="text-[11px] text-emerald-400 font-medium bg-emerald-950/30 px-1.5 rounded">Remote</span>' : ''}
+                </div>
+                <h3 class="text-sm font-semibold text-white tracking-tight">${job.title}</h3>
+                <p class="text-xs text-slate-400 font-medium">${job.company} • Req: ${job.experienceRange}</p>
+              </div>
+
+              <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                <span class="px-2.5 py-1 rounded-md border text-xs font-bold ${scoreBg}">
+                  ${item.score}% Match
+                </span>
+                <a href="${job.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1 transition">
+                  Apply <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+            </div>
+
+            <!-- "Why this matches" Rationale Callout -->
+            <div class="bg-navy-950/70 border border-navy-800/90 rounded-lg p-2.5 text-xs text-slate-300 flex items-start gap-2">
+              <i class="fa-solid fa-sparkles text-violet-400 text-xs mt-0.5 flex-shrink-0"></i>
+              <p class="leading-relaxed text-[11px] text-slate-300">
+                <span class="font-semibold text-slate-200">Why it matches:</span> ${item.matchReason}
+              </p>
+            </div>
+
+            <!-- Skill Tags -->
+            <div class="pt-2 border-t border-navy-800/80 flex flex-wrap gap-1.5 items-center">
+              ${matchedTags}
+              ${missingTags}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  </script>
+</body>
+</html>
