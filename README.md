@@ -10,6 +10,13 @@ AutoApply.AI helps candidates discover relevant job opportunities without manual
 
 The project evolved from browser-based scraping to a lightweight HTTP/API-driven architecture designed to reduce latency, resource consumption, and dependence on browser automation.
 
+---
+
+## Demo
+
+https://github.com/user-attachments/assets/e26e347e-0136-451e-a479-0cce56eb30ae
+
+---
 ### Key Highlights
 
 - **Multi-source job discovery** across Hirist, Remotive, and Arbeitnow.
