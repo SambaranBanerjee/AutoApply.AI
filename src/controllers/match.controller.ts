@@ -27,10 +27,18 @@ export class MatchController {
                 return;
             }
             
-            const rawPortal = (req.body.portal || "all").toString().toLowerCase();
-            const portal: PortalSelection = VALID_PORTALS.has(rawPortal) ? (rawPortal as PortalSelection) : "all";
+            const detectedExp = ResumeParser.extractExperience(rawText);
+            const userExp = req.body.yearsOfExperience !== undefined && req.body.yearsOfExperience !== ""
+                ? Number(req.body.yearsOfExperience)
+                : detectedExp;
 
-            const userExp = Number(req.body.yearsOfExperience) || 0;
+            const pageDepth = Math.max(1, Math.min(Number(req.body.pageDepth) || 1, 4));
+
+            const rawPortal = (req.body.portal || "all").toString().toLowerCase();
+            const portal: PortalSelection = VALID_PORTALS.has(rawPortal)
+                ? (rawPortal as PortalSelection)
+                : "all";
+
             const preferredLocation = req.body.location ? [String(req.body.location)] : [];
             const remoteOnly = req.body.remoteOnly === "true";
             const experienceMode = (req.body.experienceMode as ExperienceMode) || "moderate";
@@ -38,7 +46,6 @@ export class MatchController {
             const targetRole = req.body.roleTitle ? String(req.body.roleTitle) : undefined;
             const jobType = req.body.jobType ? (String(req.body.jobType) as EmploymentType) : undefined;
             const minSalary = req.body.minSalary ? Number(req.body.minSalary) : undefined;
-            const pageDepth = Math.max(1, Math.min(Number(req.body.pageDepth) || 1, 4));
 
             const userProfile: UserProfile = {
                 skills: ephemeralKeywords,
@@ -79,6 +86,7 @@ export class MatchController {
             res.json({
                 portalSelected: portal,
                 extractedKeywords: ephemeralKeywords,
+                detectedExperience: userExp,
                 totalJobsFetched: jobs.length,
                 totalQualifiedMatches: matchedJobs.length,
                 results: matchedJobs,

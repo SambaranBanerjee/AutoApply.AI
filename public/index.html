@@ -38,14 +38,13 @@
           <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
             AutoApply<span class="text-violet-500">.AI</span>
           </h1>
-          <span class="text-xs px-2 py-0.5 rounded bg-navy-850 border border-navy-700 text-slate-400 font-medium">v1.2</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-navy-850 border border-navy-700 text-slate-400 font-medium">v1.3</span>
         </div>
         <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
-          Resume-to-Job Matching Engine with Explicit Fit Rationales
+          Autonomous Resume Skill & Experience Detection with Multi-Portal Matching
         </p>
       </div>
 
-      <!-- Compact Status Indicator -->
       <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-navy-900 border border-navy-800 text-[11px] font-medium text-slate-300">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
         <span>Service Ready</span>
@@ -71,14 +70,12 @@
             <div id="dropzone" class="border-2 border-dashed border-navy-700 hover:border-violet-500/80 rounded-lg p-5 text-center cursor-pointer transition bg-navy-950/60 group">
               <input type="file" id="resumeInput" accept=".pdf" class="hidden" required />
               
-              <!-- Empty State -->
               <div id="emptyDropState" class="space-y-1.5">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-500 group-hover:text-violet-400 transition-colors"></i>
                 <p class="text-xs font-medium text-slate-300">Drop PDF resume here, or <span class="text-violet-400 underline">browse</span></p>
-                <p class="text-[11px] text-slate-500">Max size 5MB • Never saved to disk</p>
+                <p class="text-[11px] text-slate-500">Auto-detects skills & experience • Never saved to disk</p>
               </div>
 
-              <!-- Selected File State -->
               <div id="activeFileState" class="hidden flex items-center justify-between bg-navy-850 border border-navy-750 px-3 py-2 rounded-md text-left">
                 <div class="flex items-center gap-2.5 overflow-hidden pr-2">
                   <i class="fa-solid fa-file-pdf text-rose-400 text-lg flex-shrink-0"></i>
@@ -103,8 +100,8 @@
               </h2>
             </div>
 
-            <div class="grid grid-cols-2 gap-3.5">
-              <div class="col-span-2 sm:col-span-1">
+            <div class="space-y-3.5">
+              <div>
                 <label class="block text-xs font-medium text-slate-300 mb-1.5">Portal Platform</label>
                 <select id="portal" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
                   <option value="all">All Portals (Aggregated)</option>
@@ -114,25 +111,22 @@
                 </select>
               </div>
 
-              <div class="col-span-2 sm:col-span-1">
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Role Track</label>
-                <select id="roleTitle" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
-                  <option value="">Any Technical Track</option>
-                  <option value="Full Stack">Full Stack</option>
-                  <option value="Frontend">Frontend / UI</option>
-                  <option value="Backend">Backend / API</option>
-                  <option value="Mobile">Mobile (React Native / iOS)</option>
-                </select>
-              </div>
+              <div class="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1.5">Role Track</label>
+                  <select id="roleTitle" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
+                    <option value="">Any Technical Track</option>
+                    <option value="Full Stack">Full Stack</option>
+                    <option value="Frontend">Frontend / UI</option>
+                    <option value="Backend">Backend / API</option>
+                    <option value="Mobile">Mobile (React Native / iOS)</option>
+                  </select>
+                </div>
 
-              <div class="col-span-2 sm:col-span-1">
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Years of Exp</label>
-                <input type="number" id="yearsOfExperience" value="1" min="0" max="25" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500" />
-              </div>
-
-              <div class="col-span-2 sm:col-span-1">
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Location Preference</label>
-                <input type="text" id="location" placeholder="e.g. Bangalore, Remote" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500 placeholder:text-slate-600" />
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1.5">Location Preference</label>
+                  <input type="text" id="location" placeholder="e.g. Bangalore, Remote" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500 placeholder:text-slate-600" />
+                </div>
               </div>
             </div>
           </div>
@@ -172,7 +166,7 @@
           <div class="space-y-2 pt-1">
             <button type="submit" id="submitBtn" class="w-full bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-medium py-2.5 rounded-lg text-sm transition-all shadow-sm shadow-violet-950 flex items-center justify-center gap-2">
               <i class="fa-solid fa-magnifying-glass text-xs"></i>
-              <span>Search & Analyze Matches</span>
+              <span>Analyze & Match Jobs</span>
             </button>
             <button type="button" id="exportBtn" class="w-full border border-navy-700 hover:bg-navy-850 text-slate-300 font-medium py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
               <i class="fa-solid fa-file-csv text-slate-400"></i>
@@ -181,13 +175,21 @@
           </div>
         </form>
 
-        <!-- Parsed Skills Preview -->
-        <div id="skillsCard" class="hidden bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-2.5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-semibold text-slate-300">Identified Resume Stack</h3>
-            <span id="skillsCount" class="text-[11px] text-slate-500">0 skills</span>
+        <!-- Parsed Profile Preview -->
+        <div id="skillsCard" class="hidden bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between border-b border-navy-800/80 pb-2">
+            <h3 class="text-xs font-semibold text-slate-300">Detected Profile Signals</h3>
+            <span id="detectedExpBadge" class="text-[11px] px-2 py-0.5 rounded bg-violet-950/80 text-violet-300 border border-violet-800/60 font-medium">
+              0 yrs exp
+            </span>
           </div>
-          <div id="skillsBadgeContainer" class="flex flex-wrap gap-1.5"></div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] text-slate-400">Extracted Skills</span>
+              <span id="skillsCount" class="text-[11px] text-slate-500">0 skills</span>
+            </div>
+            <div id="skillsBadgeContainer" class="flex flex-wrap gap-1.5"></div>
+          </div>
         </div>
       </div>
 
@@ -229,6 +231,7 @@
     const skillsCard = document.getElementById("skillsCard");
     const skillsCount = document.getElementById("skillsCount");
     const skillsBadgeContainer = document.getElementById("skillsBadgeContainer");
+    const detectedExpBadge = document.getElementById("detectedExpBadge");
 
     function formatBytes(bytes) {
       if (bytes === 0) return '0 Bytes';
@@ -274,7 +277,6 @@
       }
     });
 
-    // Drag-and-drop support
     dropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
       dropzone.classList.add("border-violet-500");
@@ -301,7 +303,6 @@
       formData.append("resume", file);
       formData.append("portal", document.getElementById("portal").value);
       formData.append("roleTitle", document.getElementById("roleTitle").value);
-      formData.append("yearsOfExperience", document.getElementById("yearsOfExperience").value);
       formData.append("experienceMode", document.getElementById("experienceMode").value);
       formData.append("location", document.getElementById("location").value);
       formData.append("pageDepth", document.getElementById("pageDepth").value);
@@ -330,7 +331,7 @@
           return;
         }
 
-        renderSkills(data.extractedKeywords || []);
+        renderSkills(data.extractedKeywords || [], data.detectedExperience ?? 0);
         renderResults(data.results || [], data.totalQualifiedMatches, data.totalJobsFetched);
       } catch (err) {
         searchStatus.classList.add("hidden");
@@ -369,9 +370,10 @@
       }
     });
 
-    function renderSkills(skills) {
+    function renderSkills(skills, detectedExp) {
       if (!skills.length) return;
       skillsCard.classList.remove("hidden");
+      detectedExpBadge.textContent = detectedExp === 0 ? "Fresher (0 yrs)" : `${detectedExp} yrs exp`;
       skillsCount.textContent = `${skills.length} detected`;
       skillsBadgeContainer.innerHTML = skills
         .map(s => `<span class="px-2 py-0.5 bg-navy-800 border border-navy-700 text-slate-300 text-[11px] rounded font-medium">${s}</span>`)

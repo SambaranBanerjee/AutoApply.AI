@@ -22,6 +22,7 @@ const SKILL_DICTIONARY: Record<string, string[]> = {
   "Kubernetes": ["kubernetes", "k8s"],
   "AWS": ["aws", "amazon web services"],
   "Git": ["git", "github", "gitlab"],
+  "REST APIs": ["rest", "restful", "rest api", "restful webservices"],
 };
 
 export class ResumeParser {
@@ -54,5 +55,47 @@ export class ResumeParser {
     }
 
     return Array.from(matchedSkills);
+  }
+
+  static extractExperience(text: string): Number {
+    const currentYear = new Date().getFullYear();
+
+    const pattern = /(\d+(?:\.\d+)?)\s*(?:\+)?\s*(?:years?|yrs?)(?:\s+of)?\s+experience/i;
+    const exact = text.match(pattern);
+
+    if (exact && exact[1]) {
+      const exp = parseFloat(exact[1]);
+      if (!isNaN(exp) && exp >= 0 && exp <= 30) {
+        return Math.round(exp);
+      }
+    }
+
+    const fresherSignal = /\b(intern|internship|student|bachelor|undergraduate|fresher|expected graduation|batch of 202[4-9])\b/i.test(text);
+    const datePattern = /\b(20\d{2})\s*(?:–|-|to)\s*(20\d{2}|present|current)\b/gi;
+
+    let match: RegExpExecArray | null;
+    let maxSpan = 0;
+
+    while ((match = datePattern.exec(text)) !== null) {
+      const startYear = parseInt(match[1], 10);
+      const endYearStr = match[2].toLowerCase();
+      const endYear = (endYearStr === "present" || endYearStr === "current")
+        ? currentYear
+        : parseInt(endYearStr, 10);
+
+      if (!isNaN(startYear) && !isNaN(endYear) && endYear >= startYear && endYear <= currentYear + 1) {
+        const span = endYear - startYear;
+
+        if (span > maxSpan && span <= 15) {
+          maxSpan = span;
+        }
+      }
+    }
+
+    if (fresherSignal && maxSpan <= 1) {
+      return 0;
+    }
+
+    return maxSpan > 0 ? maxSpan : 0;
   }
 }

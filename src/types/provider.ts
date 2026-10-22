@@ -7,7 +7,7 @@ export interface SearchOptions {
   /** Maximum number of items per keyword query (default value is 20) */
   limit?: number;
   pageDepth?: number;
-  userExperience?: number;
+  userExperience?: number | Number;
   locations?: string[];
   remoteOnly?: boolean;
 }
