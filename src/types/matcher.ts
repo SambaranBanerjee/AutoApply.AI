@@ -12,6 +12,7 @@ export interface UserProfile {
   targetRole?: string; 
   jobType?: EmploymentType;
   minSalary?: number;
+  resumeEmbedding?: number[] | null;
   includeUndisclosedSalary?: boolean; // Default true so jobs hiding salary aren't dropped
 }
 
@@ -30,6 +31,8 @@ export interface JobMatchResult {
     isRemote: boolean;
   };
   score: number;
+  lexicalScore?: number;
+  semanticScore?: number;
   matchedSkills: string[];
   missingMandatorySkills: string[];
   isExperienceMatch: boolean;

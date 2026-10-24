@@ -6,6 +6,7 @@ import { ProviderFactory } from "../services/providers/provider.factory";
 import { JobMatcher } from "../services/matcher/jobMatcher";
 import { EmploymentType } from "../types/job";
 import { csvExporter } from "../services/export/csvExporter";
+import { GeminiEmbeddingService } from "../services/ml/geminiEmbedding.service";
 
 const VALID_PORTALS: Set<string> = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 
@@ -26,6 +27,8 @@ export class MatchController {
                 });
                 return;
             }
+
+            const resumeEmbedding = await GeminiEmbeddingService.getSingleEmbedding(rawText);
             
             const detectedExp: number = Number(ResumeParser.extractExperience(rawText)) || 0;
             const userExp = req.body.yearsOfExperience !== undefined && req.body.yearsOfExperience !== ""
@@ -56,6 +59,7 @@ export class MatchController {
                 targetRole,
                 jobType,
                 minSalary,
+                resumeEmbedding,
             };
 
             const jobs = await ProviderFactory.search(portal, {
@@ -67,7 +71,7 @@ export class MatchController {
                 limit: 20,
             });
 
-            const matchedJobs = JobMatcher.matchAll(jobs, userProfile, 30);
+            const matchedJobs = await JobMatcher.matchAll(jobs, userProfile, 30);
 
             const requestedFormat = (req.body.format || req.query.format || "json")
                 .toString()
@@ -87,6 +91,7 @@ export class MatchController {
                 portalSelected: portal,
                 extractedKeywords: ephemeralKeywords,
                 detectedExperience: userExp,
+                semanticMatchingEnabled: Boolean(resumeEmbedding),
                 totalJobsFetched: jobs.length,
                 totalQualifiedMatches: matchedJobs.length,
                 results: matchedJobs,

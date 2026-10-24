@@ -5,6 +5,7 @@ const resumeParser_1 = require("../services/resume/resumeParser");
 const provider_factory_1 = require("../services/providers/provider.factory");
 const jobMatcher_1 = require("../services/matcher/jobMatcher");
 const csvExporter_1 = require("../services/export/csvExporter");
+const geminiEmbedding_service_1 = require("../services/ml/geminiEmbedding.service");
 const VALID_PORTALS = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 class MatchController {
     static async handleResumeMatch(req, res) {
@@ -21,6 +22,7 @@ class MatchController {
                 });
                 return;
             }
+            const resumeEmbedding = await geminiEmbedding_service_1.GeminiEmbeddingService.getSingleEmbedding(rawText);
             const detectedExp = Number(resumeParser_1.ResumeParser.extractExperience(rawText)) || 0;
             const userExp = req.body.yearsOfExperience !== undefined && req.body.yearsOfExperience !== ""
                 ? Number(req.body.yearsOfExperience)
@@ -45,6 +47,7 @@ class MatchController {
                 targetRole,
                 jobType,
                 minSalary,
+                resumeEmbedding,
             };
             const jobs = await provider_factory_1.ProviderFactory.search(portal, {
                 keywords: ephemeralKeywords,
@@ -54,7 +57,7 @@ class MatchController {
                 pageDepth,
                 limit: 20,
             });
-            const matchedJobs = jobMatcher_1.JobMatcher.matchAll(jobs, userProfile, 30);
+            const matchedJobs = await jobMatcher_1.JobMatcher.matchAll(jobs, userProfile, 30);
             const requestedFormat = (req.body.format || req.query.format || "json")
                 .toString()
                 .toLowerCase();
@@ -70,6 +73,7 @@ class MatchController {
                 portalSelected: portal,
                 extractedKeywords: ephemeralKeywords,
                 detectedExperience: userExp,
+                semanticMatchingEnabled: Boolean(resumeEmbedding),
                 totalJobsFetched: jobs.length,
                 totalQualifiedMatches: matchedJobs.length,
                 results: matchedJobs,

@@ -1,5 +1,6 @@
 import { EmploymentType, StandardJob } from "../../types/job";
 import { UserProfile, ExperienceMode, JobMatchResult } from "../../types/matcher";
+import { GeminiEmbeddingService } from "../ml/geminiEmbedding.service";
 
 function normalizeSkill(name?: string | null): string {
   if (!name || typeof name !== "string") {
@@ -298,49 +299,85 @@ export class JobMatcher {
     };
   }
 
-  static matchAll(
+  static async matchAll(
     jobs: StandardJob[],
     profile: UserProfile,
     minScoreThreshold = 30
-  ): JobMatchResult[] {
-    const expMode = profile.experienceMode || "moderate";
+  ): Promise<JobMatchResult[]> {
+    const filteredJobs = jobs.filter((job) => {
+      const roleOk = matchesTargetRole(job.title, job.tags || [], profile.targetRole);
+      const typeOk = matchesJobType(job.jobType, profile.jobType);
 
-    return jobs
-      .map((job) => this.evaluate(job, profile))
-      .filter((result) => {
-        // Discarding any job with zero skill match or below threshold
-        if (result.score < minScoreThreshold || result.matchedSkills.length === 0) {
-          return false;
+      if (!roleOk || !typeOk) return false;
+
+      if (
+        profile.minSalary !== undefined &&
+        job.maxSalary !== undefined &&
+        job.maxSalary > 0 &&
+        job.maxSalary < profile.minSalary
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const lexicalResults = filteredJobs.map((job) => ({
+      job,
+      result: this.evaluate(job, profile),
+    }));
+
+    const candidatePool = lexicalResults.filter(({ result }) => {
+      if (profile.experienceMode === "any") return true;
+      return result.isExperienceMatch;
+    });
+
+    let jobEmbeddings: (number[] | null)[] = [];
+    if (profile.resumeEmbedding && candidatePool.length > 0) {
+      const jobTexts = candidatePool.map(({ job }) => {
+        const tagsStr = job.tags.map((t) => t.name).join(", ");
+        return `${job.title}. Required skills: ${tagsStr}. ${job.description || ""}`;
+      });
+
+      jobEmbeddings = await GeminiEmbeddingService.getBatchEmbeddings(jobTexts);
+    }
+
+    const finalResults: JobMatchResult[] = [];
+
+    for (let i = 0; i < candidatePool.length; i++) {
+      const { result } = candidatePool[i];
+      const jobVec = jobEmbeddings[i];
+
+      let finalScore = result.score;
+      let semanticScore: number | undefined = undefined;
+      let reason = result.matchReason;
+
+      if (profile.resumeEmbedding && jobVec) {
+        const similarity = GeminiEmbeddingService.cosineSimilarity(
+          profile.resumeEmbedding,
+          jobVec
+        );
+        semanticScore = Math.round(similarity * 100);
+
+        finalScore = Math.round(0.45 * result.score + 0.55 * semanticScore);
+
+        if (semanticScore >= 75) {
+          reason = `High semantic relevance (${semanticScore}% contextual fit). ` + reason;
         }
+      }
 
-        const originalJob = jobs.find((j) => j.id === result.job.id);
-        if (!originalJob) return false;
+      if (finalScore >= minScoreThreshold) {
+        finalResults.push({
+          ...result,
+          score: finalScore,
+          lexicalScore: result.score,
+          semanticScore,
+          matchReason: reason,
+        });
+      }
+    }
 
-        if (!matchesTargetRole(originalJob.title, originalJob.tags || [], profile.targetRole)) {
-          return false;
-        }
-
-        if (expMode !== "any" && !result.isExperienceMatch) {
-          return false;
-        }
-
-        if (profile.remoteOnly && !result.job.isRemote) {
-          return false;
-        }
-
-        if (profile.preferredLocations && profile.preferredLocations.length > 0) {
-          const hasLocation = result.job.locations.some((loc) =>
-            profile.preferredLocations?.some((pref) => {
-              const p = pref.toLowerCase();
-              const l = loc.toLowerCase();
-              return l.includes(p) || p.includes(l);
-            })
-          );
-          if (!hasLocation && !result.job.isRemote) return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => b.score - a.score);
+    // Return descending by final score
+    return finalResults.sort((a, b) => b.score - a.score);
   }
 }

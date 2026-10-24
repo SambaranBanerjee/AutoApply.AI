@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobMatcher = void 0;
+const geminiEmbedding_service_1 = require("../ml/geminiEmbedding.service");
 function normalizeSkill(name) {
     if (!name || typeof name !== "string") {
         return "";
@@ -236,39 +237,64 @@ class JobMatcher {
             matchReason,
         };
     }
-    static matchAll(jobs, profile, minScoreThreshold = 30) {
-        const expMode = profile.experienceMode || "moderate";
-        return jobs
-            .map((job) => this.evaluate(job, profile))
-            .filter((result) => {
-            // Discarding any job with zero skill match or below threshold
-            if (result.score < minScoreThreshold || result.matchedSkills.length === 0) {
+    static async matchAll(jobs, profile, minScoreThreshold = 30) {
+        const filteredJobs = jobs.filter((job) => {
+            const roleOk = matchesTargetRole(job.title, job.tags || [], profile.targetRole);
+            const typeOk = matchesJobType(job.jobType, profile.jobType);
+            if (!roleOk || !typeOk)
                 return false;
-            }
-            const originalJob = jobs.find((j) => j.id === result.job.id);
-            if (!originalJob)
+            if (profile.minSalary !== undefined &&
+                job.maxSalary !== undefined &&
+                job.maxSalary > 0 &&
+                job.maxSalary < profile.minSalary) {
                 return false;
-            if (!matchesTargetRole(originalJob.title, originalJob.tags || [], profile.targetRole)) {
-                return false;
-            }
-            if (expMode !== "any" && !result.isExperienceMatch) {
-                return false;
-            }
-            if (profile.remoteOnly && !result.job.isRemote) {
-                return false;
-            }
-            if (profile.preferredLocations && profile.preferredLocations.length > 0) {
-                const hasLocation = result.job.locations.some((loc) => profile.preferredLocations?.some((pref) => {
-                    const p = pref.toLowerCase();
-                    const l = loc.toLowerCase();
-                    return l.includes(p) || p.includes(l);
-                }));
-                if (!hasLocation && !result.job.isRemote)
-                    return false;
             }
             return true;
-        })
-            .sort((a, b) => b.score - a.score);
+        });
+        const lexicalResults = filteredJobs.map((job) => ({
+            job,
+            result: this.evaluate(job, profile),
+        }));
+        const candidatePool = lexicalResults.filter(({ result }) => {
+            if (profile.experienceMode === "any")
+                return true;
+            return result.isExperienceMatch;
+        });
+        let jobEmbeddings = [];
+        if (profile.resumeEmbedding && candidatePool.length > 0) {
+            const jobTexts = candidatePool.map(({ job }) => {
+                const tagsStr = job.tags.map((t) => t.name).join(", ");
+                return `${job.title}. Required skills: ${tagsStr}. ${job.description || ""}`;
+            });
+            jobEmbeddings = await geminiEmbedding_service_1.GeminiEmbeddingService.getBatchEmbeddings(jobTexts);
+        }
+        const finalResults = [];
+        for (let i = 0; i < candidatePool.length; i++) {
+            const { result } = candidatePool[i];
+            const jobVec = jobEmbeddings[i];
+            let finalScore = result.score;
+            let semanticScore = undefined;
+            let reason = result.matchReason;
+            if (profile.resumeEmbedding && jobVec) {
+                const similarity = geminiEmbedding_service_1.GeminiEmbeddingService.cosineSimilarity(profile.resumeEmbedding, jobVec);
+                semanticScore = Math.round(similarity * 100);
+                finalScore = Math.round(0.45 * result.score + 0.55 * semanticScore);
+                if (semanticScore >= 75) {
+                    reason = `High semantic relevance (${semanticScore}% contextual fit). ` + reason;
+                }
+            }
+            if (finalScore >= minScoreThreshold) {
+                finalResults.push({
+                    ...result,
+                    score: finalScore,
+                    lexicalScore: result.score,
+                    semanticScore,
+                    matchReason: reason,
+                });
+            }
+        }
+        // Return descending by final score
+        return finalResults.sort((a, b) => b.score - a.score);
     }
 }
 exports.JobMatcher = JobMatcher;
