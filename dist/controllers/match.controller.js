@@ -6,6 +6,7 @@ const provider_factory_1 = require("../services/providers/provider.factory");
 const jobMatcher_1 = require("../services/matcher/jobMatcher");
 const csvExporter_1 = require("../services/export/csvExporter");
 const geminiEmbedding_service_1 = require("../services/ml/geminiEmbedding.service");
+const skillGap_service_1 = require("../services/analytics/skillGap.service");
 const VALID_PORTALS = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 class MatchController {
     static async handleResumeMatch(req, res) {
@@ -69,6 +70,7 @@ class MatchController {
                 res.status(200).send(csvContent);
                 return;
             }
+            const skillGaps = skillGap_service_1.SkillGapService.analyze(jobs, ephemeralKeywords, 6);
             res.json({
                 portalSelected: portal,
                 extractedKeywords: ephemeralKeywords,
@@ -76,6 +78,7 @@ class MatchController {
                 semanticMatchingEnabled: Boolean(resumeEmbedding),
                 totalJobsFetched: jobs.length,
                 totalQualifiedMatches: matchedJobs.length,
+                skillGaps,
                 results: matchedJobs,
             });
         }

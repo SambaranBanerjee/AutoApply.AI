@@ -7,6 +7,7 @@ import { JobMatcher } from "../services/matcher/jobMatcher";
 import { EmploymentType } from "../types/job";
 import { csvExporter } from "../services/export/csvExporter";
 import { GeminiEmbeddingService } from "../services/ml/geminiEmbedding.service";
+import { SkillGapService } from "../services/analytics/skillGap.service";
 
 const VALID_PORTALS: Set<string> = new Set(["hirist", "remotive", "arbeitnow", "all"]);
 
@@ -86,7 +87,9 @@ export class MatchController {
                 res.status(200).send(csvContent);
                 return;
             }
-
+            
+            const skillGaps = SkillGapService.analyze(jobs, ephemeralKeywords, 6);
+            
             res.json({
                 portalSelected: portal,
                 extractedKeywords: ephemeralKeywords,
@@ -94,6 +97,7 @@ export class MatchController {
                 semanticMatchingEnabled: Boolean(resumeEmbedding),
                 totalJobsFetched: jobs.length,
                 totalQualifiedMatches: matchedJobs.length,
+                skillGaps,
                 results: matchedJobs,
             });
         }

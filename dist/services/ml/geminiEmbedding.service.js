@@ -4,12 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GeminiEmbeddingService = void 0;
-// in src/services/ml/geminiEmbedding.service.ts
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 class GeminiEmbeddingService {
     static ai = null;
-    static modelName = "text-embedding-004";
+    // Standard embedding identifier for Google GenAI v1beta
+    static modelName = "gemini-embedding-001";
     static async getClient() {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
@@ -21,21 +21,20 @@ class GeminiEmbeddingService {
                 this.ai = new GoogleGenAI({ apiKey });
             }
             catch (err) {
-                console.warn("[GeminiEmbeddingService] Could not load @google/genai:", err.message);
+                console.warn("[GeminiEmbeddingService] Could not initialize GoogleGenAI:", err.message);
                 return null;
             }
         }
         return this.ai;
     }
     /**
-     * Generates a 768-dimensional embedding for a single text snippet (e.g. resume).
-     * Returns null if API key is not present or an error occurs.
+     * Generates a dense embedding vector for a single text string.
      */
     static async getSingleEmbedding(text) {
-        const ai = await this.getClient();
-        if (!ai)
-            return null;
         try {
+            const ai = await this.getClient();
+            if (!ai || !ai.models)
+                return null;
             const sanitized = text.replace(/\s+/g, " ").trim().slice(0, 2000);
             const response = await ai.models.embedContent({
                 model: this.modelName,
@@ -44,19 +43,21 @@ class GeminiEmbeddingService {
             return response.embeddings?.[0]?.values || null;
         }
         catch (err) {
-            console.warn("[GeminiEmbeddingService] Single embed error, falling back:", err.message);
+            console.warn("[GeminiEmbeddingService] Single embed error, falling back to lexical:", err.message);
             return null;
         }
     }
     /**
-     * Batch embeds up to 100 job descriptions in a single API call.
+     * Batch embeds candidate job descriptions in 1 single HTTP request.
      */
     static async getBatchEmbeddings(texts) {
-        const ai = await this.getClient();
-        if (!ai || texts.length === 0) {
-            return texts.map(() => null);
-        }
+        if (texts.length === 0)
+            return [];
         try {
+            const ai = await this.getClient();
+            if (!ai || !ai.models) {
+                return texts.map(() => null);
+            }
             const sanitizedTexts = texts.map((t) => t.replace(/\s+/g, " ").trim().slice(0, 1000));
             const response = await ai.models.embedContent({
                 model: this.modelName,
@@ -65,16 +66,15 @@ class GeminiEmbeddingService {
             if (!response.embeddings || response.embeddings.length === 0) {
                 return texts.map(() => null);
             }
-            // Explicitly type `e` to avoid implicit any under strict mode
             return response.embeddings.map((e) => e.values || null);
         }
         catch (err) {
-            console.warn("[GeminiEmbeddingService] Batch embed error, falling back:", err.message);
+            console.warn("[GeminiEmbeddingService] Batch embed error, falling back to lexical:", err.message);
             return texts.map(() => null);
         }
     }
     /**
-     * Vector Cosine Similarity: (A . B) / (||A|| * ||B||)
+     * Mathematical Cosine Similarity: (A . B) / (||A|| * ||B||)
      */
     static cosineSimilarity(vecA, vecB) {
         if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) {

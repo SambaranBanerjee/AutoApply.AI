@@ -208,6 +208,21 @@
         </div>
       </div>
 
+      <!-- Skill Gap & Market Demand Widget -->
+      <div id="skill-gap-banner" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs transition-colors duration-200">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>🎯 Market Demand & High-ROI Missing Skills</span>
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Technologies requested by relevant listings that are missing from your uploaded resume.
+            </p>
+          </div>
+        </div>
+        <div id="skill-gap-pills" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mt-3"></div>
+      </div>
+
       <!-- Loading State -->
       <div id="loading-spinner" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center shadow-xs transition-colors duration-200">
         <div class="inline-block w-8 h-8 border-3 border-rose-600 dark:border-rose-400 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -280,6 +295,8 @@
     const statsSubtitle = document.getElementById('stats-subtitle');
     const extractedKeywordsContainer = document.getElementById('extracted-keywords-container');
     const exportCsvBtn = document.getElementById('export-csv-btn');
+    const skillGapBanner = document.getElementById('skill-gap-banner');
+    const skillGapPills = document.getElementById('skill-gap-pills');
 
     let currentResults = [];
 
@@ -323,6 +340,7 @@
       // UI state
       placeholderState.classList.add('hidden');
       statsBanner.classList.add('hidden');
+      skillGapBanner.classList.add('hidden');
       resultsContainer.innerHTML = '';
       loadingSpinner.classList.remove('hidden');
       submitBtn.disabled = true;
@@ -397,6 +415,32 @@
           <span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${k}</span>
         `).join('')}
       `;
+
+      // Render Skill Gaps
+      if (data.skillGaps && data.skillGaps.length > 0) {
+        skillGapBanner.classList.remove('hidden');
+        skillGapPills.innerHTML = data.skillGaps.map(gap => {
+          const impactBadge = gap.impactScore === 'High'
+            ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+            : gap.impactScore === 'Medium'
+            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+            : 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+
+          return `
+            <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">${gap.skill}</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400">Found in ${gap.demandCount} postings (${gap.frequencyPercentage}%)</span>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${impactBadge}">
+                ${gap.impactScore} ROI
+              </span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        skillGapBanner.classList.add('hidden');
+      }
 
       if (!data.results || data.results.length === 0) {
         resultsContainer.innerHTML = `
