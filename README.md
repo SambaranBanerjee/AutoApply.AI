@@ -27,6 +27,11 @@ Beyond job recommendations, AutoApply.AI analyzes the fetched listings to identi
 - **CSV export:** Supports exporting recommendations through an RFC 4180-compliant CSV subsystem.
 
 ---
+## Demo
+
+https://github.com/user-attachments/assets/af2adc7f-98bb-42b0-b2ea-f26ab6f15479
+
+---
 
 ## Table of Contents
 
