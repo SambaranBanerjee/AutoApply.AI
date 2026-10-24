@@ -3,451 +3,469 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AutoApply.AI - Job Discovery & Alignment Engine</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>AutoApply.AI - Autonomous In-Memory Job Matcher</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            navy: {
-              950: '#070a13',
-              900: '#0d1322',
-              850: '#11182c',
-              800: '#1b243b',
-              700: '#283556'
-            }
-          }
-        }
-      }
+      darkMode: 'class'
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+  <script>
+    // Prevent theme flash on initial load
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   </script>
 </head>
-<body class="bg-navy-950 text-slate-200 font-sans antialiased min-h-screen">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-    
-    <!-- Top Bar -->
-    <header class="flex items-center justify-between pb-5 border-b border-navy-800">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
-            AutoApply<span class="text-violet-500">.AI</span>
-          </h1>
-          <span class="text-xs px-2 py-0.5 rounded bg-navy-850 border border-navy-700 text-slate-400 font-medium">v1.3</span>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col antialiased transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
+          ⚡
         </div>
-        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
-          Autonomous Resume Skill & Experience Detection with Multi-Portal Matching
-        </p>
-      </div>
-
-      <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-navy-900 border border-navy-800 text-[11px] font-medium text-slate-300">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-        <span>Service Ready</span>
-      </div>
-    </header>
-
-    <!-- Main Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-7">
-      
-      <!-- Left Column: Controls (5 cols) -->
-      <div class="lg:col-span-5 space-y-5">
-        <form id="matchForm" class="space-y-5">
-
-          <!-- Section 1: Resume Upload -->
-          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-navy-800/80 pb-2.5">
-              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i class="fa-solid fa-file-invoice text-violet-400 text-xs"></i> 1. Resume Document
-              </h2>
-              <span class="text-[11px] text-slate-500">In-Memory Ephemeral</span>
-            </div>
-
-            <div id="dropzone" class="border-2 border-dashed border-navy-700 hover:border-violet-500/80 rounded-lg p-5 text-center cursor-pointer transition bg-navy-950/60 group">
-              <input type="file" id="resumeInput" accept=".pdf" class="hidden" required />
-              
-              <div id="emptyDropState" class="space-y-1.5">
-                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-500 group-hover:text-violet-400 transition-colors"></i>
-                <p class="text-xs font-medium text-slate-300">Drop PDF resume here, or <span class="text-violet-400 underline">browse</span></p>
-                <p class="text-[11px] text-slate-500">Auto-detects skills & experience • Never saved to disk</p>
-              </div>
-
-              <div id="activeFileState" class="hidden flex items-center justify-between bg-navy-850 border border-navy-750 px-3 py-2 rounded-md text-left">
-                <div class="flex items-center gap-2.5 overflow-hidden pr-2">
-                  <i class="fa-solid fa-file-pdf text-rose-400 text-lg flex-shrink-0"></i>
-                  <div class="min-w-0">
-                    <p id="fileNameDisplay" class="text-xs font-medium text-slate-200 truncate">resume.pdf</p>
-                    <p id="fileSizeDisplay" class="text-[10px] text-slate-400">0 KB</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                  <button type="button" id="replaceFileBtn" class="text-[11px] text-slate-300 hover:text-white underline">Change</button>
-                  <button type="button" id="clearFileBtn" class="text-[11px] text-rose-400 hover:text-rose-300"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 2: Job Preferences -->
-          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
-            <div class="border-b border-navy-800/80 pb-2.5">
-              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i class="fa-solid fa-sliders text-violet-400 text-xs"></i> 2. Target Job Criteria
-              </h2>
-            </div>
-
-            <div class="space-y-3.5">
-              <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Portal Platform</label>
-                <select id="portal" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
-                  <option value="all">All Portals (Aggregated)</option>
-                  <option value="hirist">Hirist (India Tech)</option>
-                  <option value="remotive">Remotive (Global Remote)</option>
-                  <option value="arbeitnow">Arbeitnow (EU / Global)</option>
-                </select>
-              </div>
-
-              <div class="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label class="block text-xs font-medium text-slate-300 mb-1.5">Role Track</label>
-                  <select id="roleTitle" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
-                    <option value="">Any Technical Track</option>
-                    <option value="Full Stack">Full Stack</option>
-                    <option value="Frontend">Frontend / UI</option>
-                    <option value="Backend">Backend / API</option>
-                    <option value="Mobile">Mobile (React Native / iOS)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-xs font-medium text-slate-300 mb-1.5">Location Preference</label>
-                  <input type="text" id="location" placeholder="e.g. Bangalore, Remote" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500 placeholder:text-slate-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 3: Search Settings -->
-          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 shadow-sm space-y-4">
-            <div class="border-b border-navy-800/80 pb-2.5">
-              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i class="fa-solid fa-gauge-high text-violet-400 text-xs"></i> 3. Search Precision
-              </h2>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3.5">
-              <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Tolerance Mode</label>
-                <p class="text-[10px] text-slate-500 mb-1.5">Exp buffer flexibility</p>
-                <select id="experienceMode" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
-                  <option value="moderate" selected>Moderate (±2 yrs)</option>
-                  <option value="strict">Strict (Exact Fit)</option>
-                  <option value="any">Any (Unbounded)</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Pagination Depth</label>
-                <p class="text-[10px] text-slate-500 mb-1.5">API page scans per query</p>
-                <select id="pageDepth" class="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500">
-                  <option value="1">1 Page (~20/kw)</option>
-                  <option value="2" selected>2 Pages (~40/kw)</option>
-                  <option value="3">3 Pages (~60/kw)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="space-y-2 pt-1">
-            <button type="submit" id="submitBtn" class="w-full bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white font-medium py-2.5 rounded-lg text-sm transition-all shadow-sm shadow-violet-950 flex items-center justify-center gap-2">
-              <i class="fa-solid fa-magnifying-glass text-xs"></i>
-              <span>Analyze & Match Jobs</span>
-            </button>
-            <button type="button" id="exportBtn" class="w-full border border-navy-700 hover:bg-navy-850 text-slate-300 font-medium py-2 rounded-lg text-xs transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-file-csv text-slate-400"></i>
-              <span>Export Qualified Matches to CSV</span>
-            </button>
-          </div>
-        </form>
-
-        <!-- Parsed Profile Preview -->
-        <div id="skillsCard" class="hidden bg-navy-900 border border-navy-800 rounded-xl p-4 space-y-3">
-          <div class="flex items-center justify-between border-b border-navy-800/80 pb-2">
-            <h3 class="text-xs font-semibold text-slate-300">Detected Profile Signals</h3>
-            <span id="detectedExpBadge" class="text-[11px] px-2 py-0.5 rounded bg-violet-950/80 text-violet-300 border border-violet-800/60 font-medium">
-              0 yrs exp
-            </span>
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] text-slate-400">Extracted Skills</span>
-              <span id="skillsCount" class="text-[11px] text-slate-500">0 skills</span>
-            </div>
-            <div id="skillsBadgeContainer" class="flex flex-wrap gap-1.5"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Column: Results Stream (7 cols) -->
-      <div class="lg:col-span-7 space-y-4">
-        <!-- Results Bar -->
-        <div class="flex items-center justify-between bg-navy-900 border border-navy-800 px-4 py-3 rounded-xl text-xs text-slate-400 shadow-sm">
-          <span id="resultsCount">Provide a resume and search criteria to begin</span>
-          <span id="searchStatus" class="hidden text-violet-400 flex items-center gap-1.5">
-            <i class="fa-solid fa-circle-notch fa-spin"></i> Running Match Pipelines...
+        <div>
+          <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">AutoApply<span class="text-indigo-600 dark:text-indigo-400">.AI</span></span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-full border border-indigo-100 dark:border-indigo-800">
+            Hybrid Semantic Engine
           </span>
         </div>
+      </div>
 
-        <!-- Job Cards Container -->
-        <div id="resultsContainer" class="space-y-3.5">
-          <div class="bg-navy-900/60 border border-navy-800/80 p-12 text-center rounded-xl text-slate-500 text-xs space-y-2">
-            <i class="fa-solid fa-layer-group text-2xl text-slate-600 mb-1"></i>
-            <p>Your ranked job matches with fit rationales will appear here.</p>
-          </div>
-        </div>
+      <div class="flex items-center gap-4">
+        <span class="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> RAM-Only Processing
+        </span>
+
+        <!-- Theme Toggle Switch -->
+        <button id="theme-toggle" type="button" aria-label="Toggle theme" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 transition-colors">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+        </button>
       </div>
     </div>
-  </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Left Column: Search & Resume Upload Form (4 Cols) -->
+    <aside class="lg:col-span-4">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm sticky top-24 transition-colors duration-200">
+        <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1">Upload & Preferences</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Upload your resume to ingest live opportunities across portals.</p>
+
+        <form id="match-form" class="space-y-4">
+          <!-- File Upload -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Resume (PDF)</label>
+            <div id="dropzone" class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/50">
+              <svg class="mx-auto h-8 w-8 text-slate-400 dark:text-slate-500 mb-1" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span id="file-label" class="text-xs font-medium text-slate-600 dark:text-slate-300 block">Choose PDF or drag here</span>
+              <span class="text-[10px] text-slate-400 dark:text-slate-500 block mt-0.5">Processed entirely in memory (up to 5MB)</span>
+              <input type="file" id="resume" name="resume" accept="application/pdf" class="hidden" required />
+            </div>
+          </div>
+
+          <!-- Target Role Track -->
+          <div>
+            <label for="roleTitle" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Track</label>
+            <select id="roleTitle" name="roleTitle" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+              <option value="">Auto-Detect from Resume</option>
+              <option value="Full Stack" selected>Full Stack Developer</option>
+              <option value="Frontend">Frontend Developer</option>
+              <option value="Backend">Backend Developer</option>
+              <option value="Mobile">Mobile App Developer</option>
+            </select>
+          </div>
+
+          <!-- Job Portal Selection -->
+          <div>
+            <label for="portal" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Job Portal Source</label>
+            <select id="portal" name="portal" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+              <option value="all" selected>All Portals (Hirist + Remotive + Arbeitnow)</option>
+              <option value="hirist">Hirist (India Tech & Remote)</option>
+              <option value="remotive">Remotive (Global Remote)</option>
+              <option value="arbeitnow">Arbeitnow (EU / Visa & Remote)</option>
+            </select>
+          </div>
+
+          <!-- Experience Tolerance Mode -->
+          <div>
+            <label for="experienceMode" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Experience Tolerance</label>
+            <select id="experienceMode" name="experienceMode" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+              <option value="moderate" selected>Moderate (Includes Junior/Mid buffer)</option>
+              <option value="strict">Strict (Exact tenure filter)</option>
+              <option value="any">Any Experience Level</option>
+            </select>
+          </div>
+
+          <!-- Preferred Location -->
+          <div>
+            <label for="location" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Location Filter (Optional)</label>
+            <input type="text" id="location" name="location" placeholder="e.g. Bangalore, Remote, Noida" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <!-- Depth & Page Scope -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="pageDepth" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Scan Depth</label>
+              <select id="pageDepth" name="pageDepth" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500">
+                <option value="1">1 Page (~20 jobs)</option>
+                <option value="2" selected>2 Pages (~40 jobs)</option>
+                <option value="3">3 Pages (~60 jobs)</option>
+              </select>
+            </div>
+            <div>
+              <label for="yearsOfExperience" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Override Years</label>
+              <input type="number" id="yearsOfExperience" name="yearsOfExperience" placeholder="Auto" min="0" max="20" class="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="submit-btn" class="w-full mt-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
+            <span>Find Qualified Matches</span>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <!-- Right Column: Results & Analytics (8 Cols) -->
+    <section class="lg:col-span-8 space-y-6">
+
+      <!-- Status / Summary Bar -->
+      <div id="stats-banner" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs transition-colors duration-200">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white">Scan Results</h2>
+              <div id="ai-status-container"></div>
+            </div>
+            <p id="stats-subtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Summary of parsed resume skills and portal ingestion.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="export-csv-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+              <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Extracted Skills Badges -->
+        <div class="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5" id="extracted-keywords-container">
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-spinner" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center shadow-xs transition-colors duration-200">
+        <div class="inline-block w-8 h-8 border-3 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Analyzing Resume & Evaluating Semantic Fit...</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Generating vector embeddings via Gemini and executing parallel portal queries.</p>
+      </div>
+
+      <!-- Empty / Initial Placeholder -->
+      <div id="placeholder-state" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center shadow-xs transition-colors duration-200">
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">No Resume Analyzed Yet</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">Upload your PDF resume on the left to extract skills, calculate dual semantic scores, and view targeted listings.</p>
+      </div>
+
+      <!-- Job Cards Container -->
+      <div id="results-container" class="space-y-4"></div>
+    </section>
+  </main>
 
   <script>
-    const dropzone = document.getElementById("dropzone");
-    const resumeInput = document.getElementById("resumeInput");
-    const emptyDropState = document.getElementById("emptyDropState");
-    const activeFileState = document.getElementById("activeFileState");
-    const fileNameDisplay = document.getElementById("fileNameDisplay");
-    const fileSizeDisplay = document.getElementById("fileSizeDisplay");
-    const replaceFileBtn = document.getElementById("replaceFileBtn");
-    const clearFileBtn = document.getElementById("clearFileBtn");
-    const matchForm = document.getElementById("matchForm");
-    const exportBtn = document.getElementById("exportBtn");
-    const resultsContainer = document.getElementById("resultsContainer");
-    const resultsCount = document.getElementById("resultsCount");
-    const searchStatus = document.getElementById("searchStatus");
-    const skillsCard = document.getElementById("skillsCard");
-    const skillsCount = document.getElementById("skillsCount");
-    const skillsBadgeContainer = document.getElementById("skillsBadgeContainer");
-    const detectedExpBadge = document.getElementById("detectedExpBadge");
+    // Theme toggle logic
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
 
-    function formatBytes(bytes) {
-      if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const sizes = ['Bytes', 'KB', 'MB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    function updateIcons() {
+      if (document.documentElement.classList.contains('dark')) {
+        themeToggleLightIcon.classList.remove('hidden');
+        themeToggleDarkIcon.classList.add('hidden');
+      } else {
+        themeToggleDarkIcon.classList.remove('hidden');
+        themeToggleLightIcon.classList.add('hidden');
+      }
     }
 
-    function setFile(file) {
-      if (!file) return;
-      fileNameDisplay.textContent = file.name;
-      fileSizeDisplay.textContent = formatBytes(file.size);
-      emptyDropState.classList.add("hidden");
-      activeFileState.classList.remove("hidden");
-    }
+    updateIcons();
 
-    function clearFile() {
-      resumeInput.value = "";
-      emptyDropState.classList.remove("hidden");
-      activeFileState.classList.add("hidden");
-    }
+    themeToggleBtn.addEventListener('click', () => {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateIcons();
+    });
 
-    dropzone.addEventListener("click", (e) => {
-      if (e.target !== replaceFileBtn && e.target !== clearFileBtn && !clearFileBtn.contains(e.target)) {
-        resumeInput.click();
+    const form = document.getElementById('match-form');
+    const fileInput = document.getElementById('resume');
+    const dropzone = document.getElementById('dropzone');
+    const fileLabel = document.getElementById('file-label');
+    const submitBtn = document.getElementById('submit-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const placeholderState = document.getElementById('placeholder-state');
+    const statsBanner = document.getElementById('stats-banner');
+    const resultsContainer = document.getElementById('results-container');
+    const aiStatusContainer = document.getElementById('ai-status-container');
+    const statsSubtitle = document.getElementById('stats-subtitle');
+    const extractedKeywordsContainer = document.getElementById('extracted-keywords-container');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+
+    let currentResults = [];
+
+    // Drag-and-drop & file selection handlers
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        fileLabel.textContent = fileInput.files[0].name;
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-50/20');
       }
     });
 
-    replaceFileBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      resumeInput.click();
-    });
-
-    clearFileBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      clearFile();
-    });
-
-    resumeInput.addEventListener("change", (e) => {
-      if (e.target.files.length > 0) {
-        setFile(e.target.files[0]);
-      }
-    });
-
-    dropzone.addEventListener("dragover", (e) => {
+    dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
-      dropzone.classList.add("border-violet-500");
+      dropzone.classList.add('border-indigo-500');
     });
-    dropzone.addEventListener("dragleave", () => {
-      dropzone.classList.remove("border-violet-500");
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-indigo-500');
     });
-    dropzone.addEventListener("drop", (e) => {
+
+    dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
-      dropzone.classList.remove("border-violet-500");
-      if (e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].type.includes("pdf")) {
-        resumeInput.files = e.dataTransfer.files;
-        setFile(e.dataTransfer.files[0]);
+      dropzone.classList.remove('border-indigo-500');
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        fileLabel.textContent = fileInput.files[0].name;
       }
     });
 
-    function buildFormData(format = "json") {
-      const file = resumeInput.files[0];
-      if (!file) {
-        alert("Please attach a PDF resume file first.");
-        return null;
-      }
-      const formData = new FormData();
-      formData.append("resume", file);
-      formData.append("portal", document.getElementById("portal").value);
-      formData.append("roleTitle", document.getElementById("roleTitle").value);
-      formData.append("experienceMode", document.getElementById("experienceMode").value);
-      formData.append("location", document.getElementById("location").value);
-      formData.append("pageDepth", document.getElementById("pageDepth").value);
-      formData.append("format", format);
-      return formData;
-    }
-
-    matchForm.addEventListener("submit", async (e) => {
+    // Form submission
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = buildFormData("json");
-      if (!formData) return;
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please choose a PDF resume first.');
+        return;
+      }
 
-      searchStatus.classList.remove("hidden");
-      resultsContainer.innerHTML = "";
+      const formData = new FormData(form);
+
+      // UI state
+      placeholderState.classList.add('hidden');
+      statsBanner.classList.add('hidden');
+      resultsContainer.innerHTML = '';
+      loadingSpinner.classList.remove('hidden');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
 
       try {
-        const response = await fetch("/api/match-jobs", {
-          method: "POST",
-          body: formData,
+        const response = await fetch('/api/match-jobs', {
+          method: 'POST',
+          body: formData
         });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || errData.message || 'Error processing request');
+        }
+
         const data = await response.json();
-        searchStatus.classList.add("hidden");
-
-        if (!response.ok) {
-          alert(data.error || data.message || "Failed to process matching request.");
-          return;
-        }
-
-        renderSkills(data.extractedKeywords || [], data.detectedExperience ?? 0);
-        renderResults(data.results || [], data.totalQualifiedMatches, data.totalJobsFetched);
+        currentResults = data.results || [];
+        displayResults(data);
       } catch (err) {
-        searchStatus.classList.add("hidden");
-        alert("Network communication error.");
-        console.error(err);
+        alert('Match failed: ' + err.message);
+        placeholderState.classList.remove('hidden');
+      } finally {
+        loadingSpinner.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
       }
     });
 
-    exportBtn.addEventListener("click", async () => {
-      const formData = buildFormData("csv");
-      if (!formData) return;
+    // Export CSV handler
+    exportCsvBtn.addEventListener('click', () => {
+      if (!fileInput.files || fileInput.files.length === 0) return;
+      const formData = new FormData(form);
+      formData.set('format', 'csv');
 
-      try {
-        const response = await fetch("/api/match-jobs", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          alert("Failed to generate CSV export.");
-          return;
-        }
-
-        const blob = await response.blob();
+      fetch('/api/match-jobs', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.blob())
+      .then(blob => {
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        const a = document.createElement('a');
         a.href = url;
         a.download = `job_matches_${Date.now()}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error(err);
-        alert("Export error occurred.");
-      }
+      })
+      .catch(err => alert('CSV Export failed: ' + err.message));
     });
 
-    function renderSkills(skills, detectedExp) {
-      if (!skills.length) return;
-      skillsCard.classList.remove("hidden");
-      detectedExpBadge.textContent = detectedExp === 0 ? "Fresher (0 yrs)" : `${detectedExp} yrs exp`;
-      skillsCount.textContent = `${skills.length} detected`;
-      skillsBadgeContainer.innerHTML = skills
-        .map(s => `<span class="px-2 py-0.5 bg-navy-800 border border-navy-700 text-slate-300 text-[11px] rounded font-medium">${s}</span>`)
-        .join("");
-    }
+    function displayResults(data) {
+      statsBanner.classList.remove('hidden');
 
-    function renderResults(results, matchedCount, totalFetched) {
-      resultsCount.textContent = `Showing ${matchedCount} qualified recommendations (${totalFetched} scanned)`;
+      // AI Status Pill
+      aiStatusContainer.innerHTML = data.semanticMatchingEnabled
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+             <span class="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-purple-400 animate-pulse"></span>
+             Gemini Semantic AI Active
+           </span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+             Lexical Heuristic Active
+           </span>`;
 
-      if (results.length === 0) {
+      statsSubtitle.textContent = `Found ${data.totalQualifiedMatches} qualified positions from ${data.totalJobsFetched} listings scanned across ${data.portalSelected}.`;
+
+      // Skill Badges
+      extractedKeywordsContainer.innerHTML = `
+        <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mr-1">Extracted Stack:</span>
+        ${(data.extractedKeywords || []).map(k => `
+          <span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${k}</span>
+        `).join('')}
+      `;
+
+      if (!data.results || data.results.length === 0) {
         resultsContainer.innerHTML = `
-          <div class="bg-navy-900 border border-navy-800 p-8 text-center rounded-xl text-slate-400 text-xs">
-            No active positions satisfied your filter criteria. Consider switching tolerance mode to 'moderate' or 'any'.
-          </div>`;
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-slate-500 dark:text-slate-400 text-xs">
+            No matching jobs passed the threshold. Try lowering the experience strictness or choosing "All Portals".
+          </div>
+        `;
         return;
       }
 
-      resultsContainer.innerHTML = results.map((item) => {
-        const job = item.job;
-        const scoreBg = item.score >= 80 ? "text-emerald-400 bg-emerald-950/60 border-emerald-800" :
-                        item.score >= 50 ? "text-sky-400 bg-sky-950/60 border-sky-800" :
-                        "text-amber-400 bg-amber-950/60 border-amber-800";
+      resultsContainer.innerHTML = data.results.map(r => renderJobCard(r)).join('');
+    }
 
-        const matchedTags = item.matchedSkills.map(s =>
-          `<span class="px-2 py-0.5 bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-[11px] rounded">${s}</span>`
-        ).join("");
+    function renderJobCard(result) {
+      const { job, score, lexicalScore, semanticScore, matchedSkills, missingMandatorySkills, matchReason } = result;
 
-        const missingTags = item.missingMandatorySkills.map(s =>
-          `<span class="px-2 py-0.5 bg-rose-950/40 border border-rose-800/60 text-rose-300 text-[11px] rounded line-through">${s}</span>`
-        ).join("");
+      // Color coding for overall score
+      const scoreBadgeColor = score >= 75
+        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+        : score >= 50
+        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
 
-        return `
-          <div class="bg-navy-900 border border-navy-800 rounded-xl p-5 hover:border-navy-700 transition space-y-3.5 shadow-sm">
-            <div class="flex items-start justify-between gap-4">
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-navy-800 text-slate-300 border border-navy-700 tracking-wider">
-                    ${job.sourcePortal}
-                  </span>
-                  <span class="text-xs text-sky-400/90 font-medium">
-                    ${job.locations.join(", ") || "Remote"}
-                  </span>
-                  ${job.isRemote ? '<span class="text-[11px] text-emerald-400 font-medium bg-emerald-950/30 px-1.5 rounded">Remote</span>' : ''}
-                </div>
-                <h3 class="text-sm font-semibold text-white tracking-tight">${job.title}</h3>
-                <p class="text-xs text-slate-400 font-medium">${job.company} • Req: ${job.experienceRange}</p>
-              </div>
+      // Hybrid breakdown pill display
+      const hybridBreakdownHtml = (semanticScore !== undefined) ? `
+        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <span class="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800" title="Gemini Vector Cosine Similarity">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            ${semanticScore}% Semantic Fit
+          </span>
+          <span class="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800" title="Hard Stack Keyword Match">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            ${lexicalScore !== undefined ? lexicalScore : score}% Stack Overlap
+          </span>
+          <span class="text-slate-400 dark:text-slate-500 text-[11px] ml-auto font-medium">
+            (45% Stack + 55% Semantic)
+          </span>
+        </div>
+      ` : '';
 
-              <div class="flex flex-col items-end gap-2 flex-shrink-0">
-                <span class="px-2.5 py-1 rounded-md border text-xs font-bold ${scoreBg}">
-                  ${item.score}% Match
+      return `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:shadow-md transition-all">
+          <div class="flex justify-between items-start gap-4">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider border border-slate-200 dark:border-slate-700">
+                  ${job.sourcePortal}
                 </span>
-                <a href="${job.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-violet-400 hover:text-violet-300 font-medium flex items-center gap-1 transition">
-                  Apply <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                </a>
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  📍 ${(job.locations && job.locations.length > 0) ? job.locations.join(", ") : (job.isRemote ? "Remote" : "Not specified")}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  💼 ${job.experienceRange || "Flexible"}
+                </span>
               </div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white mt-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                <a href="${job.url}" target="_blank" rel="noopener noreferrer">${job.title}</a>
+              </h3>
+              <p class="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-0.5">${job.company}</p>
             </div>
 
-            <!-- "Why this matches" Rationale Callout -->
-            <div class="bg-navy-950/70 border border-navy-800/90 rounded-lg p-2.5 text-xs text-slate-300 flex items-start gap-2">
-              <i class="fa-solid fa-sparkles text-violet-400 text-xs mt-0.5 flex-shrink-0"></i>
-              <p class="leading-relaxed text-[11px] text-slate-300">
-                <span class="font-semibold text-slate-200">Why it matches:</span> ${item.matchReason}
-              </p>
-            </div>
-
-            <!-- Skill Tags -->
-            <div class="pt-2 border-t border-navy-800/80 flex flex-wrap gap-1.5 items-center">
-              ${matchedTags}
-              ${missingTags}
+            <div class="text-right shrink-0">
+              <span class="inline-block px-3 py-1 rounded-xl border text-sm font-extrabold ${scoreBadgeColor}">
+                ${score}% Match
+              </span>
             </div>
           </div>
-        `;
-      }).join("");
+
+          <!-- Fit Rationale -->
+          <div class="mt-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-750">
+            <span class="font-bold text-slate-700 dark:text-slate-200">Why this matches:</span> ${matchReason}
+          </div>
+
+          <!-- Skill Badges -->
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            ${(matchedSkills || []).map(s => `
+              <span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 text-[11px] rounded-md font-medium">
+                ✓ ${s}
+              </span>
+            `).join('')}
+            ${(missingMandatorySkills || []).map(s => `
+              <span class="px-2 py-0.5 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800 text-[11px] rounded-md font-medium">
+                Missing: ${s}
+              </span>
+            `).join('')}
+          </div>
+
+          <!-- Hybrid Scoring Breakdown -->
+          ${hybridBreakdownHtml}
+
+          <div class="mt-4 pt-2.5 flex justify-end">
+            <a href="${job.url}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors">
+              <span>View & Apply on ${job.sourcePortal}</span>
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      `;
     }
   </script>
 </body>
