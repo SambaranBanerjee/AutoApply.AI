@@ -1,33 +1,30 @@
-# AutoApply.AI — Intelligent Job Matching & Recommendation Engine
+# AutoApply.AI — AI-Powered Job Matching & Skill Gap Analytics
 
-An API-driven job discovery and recommendation engine that parses PDF resumes, discovers relevant job opportunities across multiple platforms, and ranks them using skill alignment, experience tolerance, and explainable scoring — with **ephemeral, in-memory resume processing**.
+An intelligent job discovery and recommendation engine that combines **Google Gemini embeddings, lexical skill matching, and explainable ranking** to connect candidates with relevant opportunities. Upload a PDF resume, discover jobs across multiple providers, understand why each role matches, and identify high-value skills to learn next.
 
----
+AutoApply.AI combines semantic search, real-time job ingestion, and resume-driven analytics in a privacy-conscious architecture designed around in-memory candidate processing.
 
 ## Overview
 
-AutoApply.AI helps candidates discover relevant job opportunities without manually searching multiple job portals. Upload a resume, select job sources, and receive ranked recommendations with transparent explanations of why each role matches your skills and experience.
+Traditional job searches rely heavily on keyword matching, making it difficult to identify opportunities described using different terminology or contextual variations. AutoApply.AI addresses this limitation through a hybrid matching engine that combines lexical overlap with semantic similarity.
 
-The project evolved from browser-based scraping to a lightweight HTTP/API-driven architecture designed to reduce latency, resource consumption, and dependence on browser automation.
+The platform parses a candidate's resume, fetches opportunities from multiple job providers, normalizes job data, and ranks recommendations using both explicit skill matches and contextual relevance.
 
----
+Beyond job recommendations, AutoApply.AI analyzes the fetched listings to identify missing technologies that could improve a candidate's alignment with the available job market.
 
-## Demo
+### Key Features
 
-https://github.com/user-attachments/assets/e26e347e-0136-451e-a479-0cce56eb30ae
-
----
-### Key Highlights
-
-- **Multi-source job discovery** across Hirist, Remotive, and Arbeitnow.
-- **In-memory PDF processing** using Multer and `pdf-parse`, without intentionally persisting resume data to disk.
-- **Automated skill extraction and experience estimation** from resume content.
-- **Parallel API ingestion** using `Promise.allSettled()` for resilient multi-keyword searches.
-- **Explainable job matching** with weighted skill coverage, experience tolerance, and human-readable rationales.
-- **Canonical job normalization** through a provider-adapter architecture.
-- **Duplicate elimination** across overlapping keyword searches.
-- **CSV export** using an RFC 4180-compliant export implementation.
-- **Type-safe architecture** built with TypeScript and Express.
+- **Hybrid AI matching:** Combines 45% keyword overlap with 55% semantic similarity using Google's `gemini-embedding-001`.
+- **Explainable recommendations:** Displays transparent score breakdowns, match badges, and tailored rationales on job cards.
+- **Multi-source discovery:** Integrates Hirist, Remotive, and Arbeitnow through provider adapters.
+- **Automated resume analysis:** Extracts skills and estimates experience from uploaded PDF resumes.
+- **Skill Gap Analytics:** Identifies technologies missing from the applicant's profile based on fetched job postings.
+- **Parallel ingestion:** Executes multiple keyword searches concurrently and deduplicates results.
+- **Resilient matching:** Falls back to lexical heuristics when semantic embedding generation is unavailable.
+- **Ephemeral resume processing:** Uses in-memory PDF buffers rather than intentionally persisting uploaded resumes to disk.
+- **Custom visual identity:** Features the official AUTOAPPLY logo and custom vector branding.
+- **Persistent theme preferences:** Provides a dark/light theme state machine with system-preference detection and Tailwind CSS styling.
+- **CSV export:** Supports exporting recommendations through an RFC 4180-compliant CSV subsystem.
 
 ---
 
@@ -35,8 +32,9 @@ https://github.com/user-attachments/assets/e26e347e-0136-451e-a479-0cce56eb30ae
 
 - [Architecture](#architecture)
 - [Core Features](#core-features)
-- [Job Matching Algorithm](#job-matching-algorithm)
-- [Supported Job Providers](#supported-job-providers)
+- [Hybrid AI Matching Engine](#hybrid-ai-matching-engine)
+- [Skill Gap Analytics](#skill-gap-analytics)
+- [Job Providers](#job-providers)
 - [Request Lifecycle](#request-lifecycle)
 - [Project Structure](#project-structure)
 - [Technology Stack](#technology-stack)
@@ -44,236 +42,329 @@ https://github.com/user-attachments/assets/e26e347e-0136-451e-a479-0cce56eb30ae
 - [API Reference](#api-reference)
 - [Privacy and Data Handling](#privacy-and-data-handling)
 - [Engineering Challenges](#engineering-challenges)
-- [Limitations and Future Improvements](#limitations-and-future-improvements)
+- [Future Improvements](#future-improvements)
 - [License](#license)
 
 ---
 
 ## Architecture
 
-AutoApply.AI follows a modular, provider-based architecture that separates data ingestion, resume processing, job normalization, matching, and export functionality.
+AutoApply.AI follows a modular architecture that separates resume parsing, job ingestion, semantic matching, analytics, and presentation.
 
 ```mermaid
 flowchart TD
     A[Candidate] --> B[Express API]
     B --> C[Multer Memory Storage]
     C --> D[PDF Resume Parser]
-    D --> E[Skill and Experience Extraction]
-    E --> F[Keyword Generation]
+    D --> E[Candidate Profile]
+    E --> F[Skill and Experience Extraction]
 
     F --> G[Provider Factory]
-    G --> H[Hirist Provider]
-    G --> I[Remotive Provider]
-    G --> J[Arbeitnow Provider]
+    G --> H[Hirist]
+    G --> I[Remotive]
+    G --> J[Arbeitnow]
 
-    H --> K[Parallel API Requests]
+    H --> K[Parallel API Ingestion]
     I --> K
     J --> K
 
-    K --> L[Canonical Job Normalization]
+    K --> L[StandardJob Normalization]
     L --> M[Deduplication]
-    M --> N[Job Matcher]
-    E --> N
 
-    N --> O[Scored Recommendations]
-    O --> P[Match Rationales]
-    P --> Q[API Response]
-    P --> R[CSV Export]
+    E --> N[Hybrid Matching Engine]
+    M --> N
+
+    N --> O[Lexical Skill Matching]
+    N --> P[Gemini Embeddings]
+    O --> Q[Weighted Score Fusion]
+    P --> Q
+
+    Q --> R[Match Score and Rationale]
+    M --> S[SkillGapService]
+    E --> S
+
+    R --> T[Ranked Recommendations]
+    S --> U[Skill Gap Insights]
+    T --> V[Web Interface]
+    U --> V
 ```
 
 ### Architectural Principles
 
-**1. Separation of concerns**
+**1. Provider independence**
 
-Each subsystem has a clearly defined responsibility. Providers handle external data sources, the resume parser extracts candidate information, and the matcher evaluates job relevance independently of any specific portal.
+External job portals use different schemas and query formats. Provider adapters normalize their responses into a canonical `StandardJob` model, keeping the matching engine independent of individual sources.
 
-**2. Provider abstraction**
+**2. Hybrid intelligence**
 
-All job sources conform to a shared interface, allowing new providers to be added without coupling the matching algorithm to provider-specific response formats.
+Lexical matching captures explicit technical skill overlap, while semantic embeddings evaluate contextual similarity. The combined score is designed to balance exact terminology with broader meaning.
 
-**3. Parallel ingestion**
+**3. Resilient AI integration**
 
-Multiple skill-based queries are executed concurrently. `Promise.allSettled()` allows the system to process successful provider responses even when individual requests fail.
+The semantic matching subsystem uses the `@google/genai` SDK and dynamic ESM imports to maintain compatibility with the application's CommonJS environment. If embedding generation fails, lexical heuristics provide a fallback path.
 
-**4. Ephemeral candidate processing**
+**4. Explainability by design**
 
-Resume uploads are handled using in-memory buffers rather than intentional local-file persistence. Candidate data is processed within the active request workflow.
+Recommendations expose score components and tailored rationales, helping candidates understand why a position ranks highly rather than relying on an opaque percentage.
 
-**5. Explainable recommendations**
+**5. Ephemeral candidate processing**
 
-Instead of relying exclusively on a percentage score, the engine generates rationales describing relevant skills, missing requirements, and the factors affecting each recommendation.
+The resume-processing pipeline uses in-memory buffers and does not require a database for candidate resume persistence.
+
+**6. Focused skill development**
+
+The Skill Gap Analytics subsystem analyzes fetched opportunities to surface technologies that appear in the job market but are missing from the applicant's parsed skill profile.
 
 ---
 
 ## Core Features
 
-### 1. PDF Resume Parsing
+### 1. Resume Parsing and Experience Estimation
 
-The resume-processing pipeline extracts text from uploaded PDF documents directly from a memory buffer.
+AutoApply.AI accepts PDF resumes and extracts candidate information directly from memory buffers.
 
-**Implementation details:**
+The resume-processing pipeline supports:
 
-- `multer.memoryStorage()` for multipart file ingestion.
-- `req.file.buffer` as the in-memory PDF representation.
-- `pdf-parse` v2.x using the `PDFParse` class API.
-- Text normalization and token extraction for downstream matching.
+- PDF text extraction using `pdf-parse` v2.x.
+- Skill and technology identification.
 - Experience estimation from explicit tenure statements and employment date ranges.
-- Student, internship, and fresher indicators to help calibrate experience estimates.
+- Detection of fresher and student indicators, including internship and expected-graduation references.
+- Preparation of a normalized candidate profile for matching and analytics.
 
-The resulting candidate profile supplies the skills and experience information used to discover and rank jobs.
+The extracted profile is used for job discovery, relevance scoring, and skill-gap analysis.
 
-### 2. Automated Skill Extraction
+### 2. Multi-Source Job Discovery
 
-The extracted skills are used to generate multiple search queries instead of relying on a single keyword.
+The Provider Factory dispatches queries to individual job sources or all configured providers.
 
-For candidates with limited experience, the query-generation process can include entry-level terms such as `Junior` to broaden the search toward relevant early-career positions.
+Multiple keywords are generated from the candidate's extracted skills, with entry-level terms introduced when appropriate. Requests are executed concurrently using `Promise.allSettled()` so that a failure in one request does not automatically invalidate successful results from other sources.
 
-Skill normalization handles common variations such as:
+### 3. Canonical Job Normalization
 
-| Original values | Normalized matching intent |
-|---|---|
-| `React`, `React.js` | React |
-| `full stack`, `fullstack` | Full Stack |
-| `Node.js`, `Nodejs` | Node.js |
-| `Java-Script`, `JavaScript` | JavaScript |
+Provider-specific responses are transformed into a shared `StandardJob` representation.
 
-Normalization also removes selected formatting differences, including spaces, hyphens, and periods, to improve matching consistency.
+This accommodates differences in:
 
-The engine can infer Full Stack alignment when both frontend and backend skills are detected.
+- Job titles and descriptions.
+- Mandatory and optional skills.
+- Experience requirements.
+- Salary ranges.
+- Locations and remote-work information.
+- Provider-specific identifiers and metadata.
 
-### 3. Multi-Source Job Discovery
+The normalized data is then consumed by the matching and analytics services.
 
-The Provider Factory dispatches requests to one or more configured job providers.
+### 4. Duplicate Elimination
 
-Supported selection modes include individual sources and an `all` mode for querying all configured providers.
+Overlapping skill queries can return the same listing multiple times.
 
-### 4. Deduplication
-
-Overlapping keyword searches can return the same job multiple times.
-
-AutoApply.AI removes duplicates using a composite key:
+AutoApply.AI uses a composite key to deduplicate listings within each source:
 
 ```typescript
 const key = `${sourcePortal}-${id}`;
 ```
 
-Including the source identifier prevents listings from different portals from being incorrectly treated as identical merely because their IDs coincide.
+Including the source prevents unrelated jobs from different providers from being collapsed solely because their IDs are identical.
 
-### 5. Explainable Job Recommendations
+### 5. Explainable Job Cards
 
-Every evaluated job can include a score and a human-readable rationale.
+Each recommendation presents the match score alongside contextual information intended to make the ranking actionable.
 
-The explanation highlights matching skills, relevant requirements, and missing skills where that information is available.
+Depending on the available job metadata and interface implementation, job cards can include:
 
-### 6. CSV Export
+- Overall match score.
+- Keyword overlap and semantic similarity breakdown badges.
+- Matching and missing skills.
+- Tailored explanations of the candidate-job alignment.
+- Job source and listing metadata.
 
-Matched jobs can be exported through a dedicated CSV streaming subsystem designed around RFC 4180 formatting conventions.
+This helps candidates distinguish between strong explicit skill matches and roles that are relevant because of their broader technical context.
 
-This makes recommendations easier to review, filter, and manage in spreadsheet applications.
+### 6. Skill Gap Analytics
 
----
+The `SkillGapService` evaluates fetched job postings against the applicant's parsed resume.
 
-## Job Matching Algorithm
+Rather than considering each recommendation in isolation, it examines technologies across the collected opportunities to identify potential areas for improvement.
 
-The matching engine combines skill coverage, role alignment, and experience compatibility to rank discovered opportunities.
+The analytics engine is designed to:
 
-### Weighted Skill Coverage
+- Identify technologies present in fetched postings but absent from the resume.
+- Highlight recurring skill requirements across available opportunities.
+- Surface potentially high-value technologies for targeted learning.
+- Complement job recommendations with actionable skill-development insights.
 
-The current scoring design allocates:
+Skill gaps are inferred from the jobs successfully retrieved by the configured providers. They should therefore be interpreted as signals from the available listings, not a complete representation of the entire job market.
 
-| Component | Weight |
-|---|---:|
-| Mandatory skill coverage | 70% |
-| Optional skill/tag coverage | 30% |
+### 7. Custom Branding and Theme Management
 
-Mandatory requirements receive greater weight because they are more indicative of whether a candidate satisfies the role's core technical expectations.
+The application's visual identity has been refreshed with a custom AUTOAPPLY logo and vector branding.
 
-The score is not intended to represent a statistically calibrated probability of receiving an interview.
+The Tailwind CSS interface also includes a lightweight dark/light theme state machine.
 
-### Zero-Match Circuit Breaker
+Theme behavior includes:
 
-A critical problem emerged when jobs without explicit mandatory tags received an artificially high score because the mandatory component defaulted to 70%.
+- Dark and light appearance modes.
+- System-preference detection.
+- Persistent user theme preferences.
+- Consistent styling across the interface.
+- No additional theme-management dependency.
 
-This allowed irrelevant roles, such as freelance writing positions, to rank highly for technical candidates.
+The interface is designed to provide a cohesive experience while allowing users to choose their preferred appearance.
 
-The solution was an explicit zero-match rule:
+### 8. CSV Export
 
-```typescript
-if (matchedSkills.length === 0) {
-    score = 0;
-}
-```
+A dedicated export subsystem supports CSV output for matched jobs, using RFC 4180 formatting conventions.
 
-The matcher also uses fallback scanning of raw job descriptions to recover relevant skills when structured tags are missing or incomplete.
-
-### Role Alignment Penalty
-
-Non-technical roles receive a 60% penalty under the current design.
-
-This reduces the likelihood of unrelated positions appearing prominently in recommendations.
-
-### Experience Tolerance
-
-The matcher supports three experience-filtering modes:
-
-| Mode | Purpose |
-|---|---|
-| `strict` | Prioritizes roles that closely satisfy experience requirements. |
-| `moderate` | Allows some flexibility, including entry-level candidates applying to roles requiring up to three years of experience. |
-| `any` | Broadens experience eligibility to include otherwise excluded opportunities. |
-
-These modes help prevent strict experience filtering from eliminating every opportunity for freshers and junior candidates.
-
-### Match Rationales
-
-Recommendations explain why a job was selected, including relevant skills and missing requirements when identifiable.
-
-This makes the matching process easier to inspect and improves the usefulness of recommendations beyond a standalone percentage.
+This allows candidates to review, filter, and organize recommendations outside the application.
 
 ---
 
-## Supported Job Providers
+## Hybrid AI Matching Engine
 
-| Provider | Integration approach | Data normalization considerations |
+The central technical feature of AutoApply.AI is its hybrid relevance-scoring system.
+
+Pure keyword matching can miss relevant jobs when descriptions use synonyms, alternative technology names, or different terminology for similar responsibilities. Pure semantic similarity, on the other hand, may rank conceptually related jobs that lack the candidate's required technical skills.
+
+AutoApply.AI combines both approaches.
+
+### Scoring Model
+
+The current scoring design uses the following weighting:
+
+| Component | Weight | Purpose |
+|---|---:|---|
+| Keyword overlap | 45% | Measures explicit overlap between candidate skills and job content |
+| Semantic similarity | 55% | Measures contextual alignment using vector embeddings |
+
+The conceptual scoring formula is:
+
+\[
+S_{\text{hybrid}} = 0.45K + 0.55C
+\]
+
+Where:
+
+- \(K\) is the normalized keyword-overlap score.
+- \(C\) is the normalized cosine-similarity score.
+- \(S_{\text{hybrid}}\) is the combined relevance score.
+
+The component scores must use compatible scales before combining them. Additional role-alignment penalties or filtering rules, where applied, can affect the final ranking.
+
+### Semantic Embeddings with Gemini
+
+The semantic subsystem uses Google's `gemini-embedding-001` embedding model through the `@google/genai` SDK.
+
+Candidate and job text are represented as vectors, allowing the matcher to evaluate contextual similarity beyond exact string equality.
+
+For normalized vectors \(u\) and \(v\), cosine similarity is:
+
+\[
+\operatorname{cos}(u,v)=
+\frac{u\cdot v}{\|u\|\|v\|}
+\]
+
+A higher similarity indicates that the two representations are more closely aligned in the embedding space. The implementation must normalize or otherwise calibrate this signal appropriately before combining it with lexical overlap.
+
+### Embedding Pipeline
+
+The integration incorporates several implementation decisions:
+
+**Dynamic ESM imports**
+
+The Google GenAI SDK is loaded dynamically to accommodate its module format within the existing CommonJS application architecture.
+
+**Single-request batch embeddings**
+
+The embedding workflow uses `embedContent` to process the required content together in a batched request where supported by the SDK's request schema. This reduces unnecessary per-item request overhead compared with issuing a separate request for every text.
+
+**Lexical fallback**
+
+If the semantic subsystem cannot generate embeddings, the engine falls back to lexical heuristics. This allows matching to continue without requiring every recommendation request to succeed at the AI integration layer.
+
+**Resilient execution**
+
+The semantic subsystem is isolated from provider ingestion and canonical normalization, making it easier to maintain and test independently.
+
+### Transparent Scoring and Rationales
+
+The matching engine surfaces score breakdown badges and tailored rationales on job cards.
+
+The objective is to show both the overall ranking and the evidence behind it, including explicit skill overlap and contextual relevance.
+
+For example, a job might be relevant because the candidate has experience with a closely related framework, even when the job description uses different terminology. The rationale should explain that contextual relationship without implying that an absent mandatory skill has been satisfied.
+
+**Important:** A match score is a relevance estimate, not a probability of receiving an interview or offer.
+
+---
+
+## Skill Gap Analytics
+
+The `SkillGapService` adds a market-informed learning dimension to the job discovery workflow.
+
+### How It Works
+
+1. Extract the candidate's skills from the uploaded resume.
+2. Collect and normalize listings from the configured providers.
+3. Scan the fetched job descriptions and available skill tags.
+4. Identify technologies appearing in the job data but missing from the candidate profile.
+5. Aggregate those signals into skill-gap insights for the interface.
+
+### Why It Matters
+
+Job matching answers:
+
+*Which available roles are most relevant to me?*
+
+Skill Gap Analytics addresses a complementary question:
+
+*Which technologies could I learn to align my profile with more of the available opportunities?*
+
+This makes the platform useful not only for finding jobs but also for identifying areas for targeted preparation.
+
+The insights depend on provider coverage, the quality of extracted job metadata, and the accuracy of resume parsing. A missing technology is not automatically a recommendation to learn it; relevance to the candidate's goals still matters.
+
+---
+
+## Job Providers
+
+| Provider | Integration approach | Normalization considerations |
 |---|---|---|
-| **Hirist** | HTTP/API integration | Numeric salary ranges, structured tags, and experience requirements |
-| **Remotive** | Developer API | HTML job descriptions and unstructured skill tags |
-| **Arbeitnow** | Developer API | Markdown descriptions, location strings, and job metadata |
+| **Hirist** | HTTP/API integration | Structured tags, salary ranges, and experience requirements |
+| **Remotive** | Developer API | HTML descriptions and unstructured skill tags |
+| **Arbeitnow** | Developer API | Markdown descriptions, locations, and job metadata |
 
-The adapters convert provider-specific responses into a common `StandardJob` representation.
+### Provider Abstraction
 
-### Provider Interface
+The architecture uses the following shared contracts and components:
 
-The architecture uses:
+- `IJobProvider` — defines the common provider contract.
+- `BaseJobProvider` — provides shared provider functionality.
+- `ProviderFactory` — selects and dispatches requests.
+- `StandardJob` — defines the canonical job representation consumed by downstream services.
 
-- `IJobProvider` — the shared provider contract.
-- `BaseJobProvider` — common provider functionality.
-- `ProviderFactory` — provider selection and dispatch.
-- `StandardJob` — the canonical job representation consumed by the matcher.
+This allows the matching engine to work with normalized data without depending on a particular job portal.
 
-This abstraction allows the matching engine to remain independent of the source platform's response schema.
-
-**Note:** API availability, authentication requirements, usage limits, and permitted access depend on each provider. Internal or reverse-engineered endpoints may change without notice.
+**Provider access note:** Authentication, availability, rate limits, and permitted API usage depend on each provider. Internal or reverse-engineered endpoints may change without notice.
 
 ---
 
 ## Request Lifecycle
 
-A typical request follows these steps:
+A typical matching request follows these stages:
 
-1. The candidate submits a PDF resume and selects the desired job sources.
+1. The candidate uploads a PDF resume and selects job sources.
 2. Multer receives the file into memory.
-3. The PDF parser extracts the resume text.
-4. The resume parser identifies relevant skills and estimates experience.
-5. The server generates multiple search keywords.
-6. The Provider Factory dispatches concurrent API requests.
-7. Provider adapters normalize successful responses into `StandardJob` objects.
-8. A composite-key map removes duplicate listings.
-9. The matching engine scores jobs against the candidate profile.
-10. The engine generates match rationales and returns recommendations.
-11. The results can be exported as CSV.
-
-Individual provider failures can be isolated so that one unsuccessful request does not necessarily invalidate the entire discovery process.
+3. The PDF parser extracts resume text.
+4. The resume parser identifies skills and estimates experience.
+5. The server generates skill-based search keywords.
+6. The Provider Factory dispatches concurrent requests.
+7. Provider adapters normalize successful responses into `StandardJob`.
+8. Duplicate listings are removed.
+9. The hybrid matcher evaluates keyword overlap and semantic similarity.
+10. The scoring system generates relevance scores and rationales, falling back to lexical matching if semantic embedding generation fails.
+11. `SkillGapService` analyzes the fetched listings against the candidate's parsed skills.
+12. Recommendations and skill-gap insights are returned to the interface.
+13. Results can be exported through the CSV subsystem.
 
 ---
 
@@ -285,23 +376,27 @@ src/
 │   └── ...                 # StandardJob, UserProfile, IJobProvider
 ├── services/
 │   ├── http/
-│   │   └── ...             # ApiClient and request serialization
+│   │   └── ...             # HTTP client and request serialization
 │   ├── resume/
 │   │   └── ...             # PDF, skill, and experience parsing
 │   ├── providers/
-│   │   └── ...             # Provider adapters and ProviderFactory
+│   │   └── ...             # Hirist, Remotive, Arbeitnow adapters
 │   ├── matcher/
-│   │   └── ...             # Scoring, filtering, and rationales
+│   │   └── ...             # Hybrid scoring and match rationales
+│   ├── skill-gap/
+│   │   └── ...             # SkillGapService analytics
 │   └── export/
-│       └── ...             # RFC 4180-compliant CSV export
+│       └── ...             # CSV export
 ├── controllers/
 │   └── ...                 # Request orchestration
 ├── routes/
 │   └── ...                 # API route definitions
-└── server.ts               # Express application and static hosting
+└── server.ts               # Express application
 ```
 
-The tree illustrates the logical module organization. Individual filenames and tests can be documented as the repository evolves.
+The tree illustrates the logical subsystem organization. Adjust directory and filename details to match the actual repository layout.
+
+The frontend contains the Tailwind CSS interface, custom vector branding, job cards, score breakdowns, skill-gap insights, and theme-management logic.
 
 ---
 
@@ -309,15 +404,19 @@ The tree illustrates the logical module organization. Individual filenames and t
 
 | Technology | Purpose |
 |---|---|
-| TypeScript | Type-safe application logic and provider contracts |
-| Node.js | Server-side JavaScript runtime |
+| TypeScript | Type-safe application and provider contracts |
+| Node.js | Server-side runtime |
 | Express.js | HTTP server and request handling |
-| Multer | Multipart PDF uploads |
+| Multer | In-memory multipart uploads |
 | `pdf-parse` v2.x | PDF text extraction |
-| HTTP client / API integrations | External job ingestion |
-| `Promise.allSettled()` | Resilient parallel request orchestration |
-| Playwright | Used during the initial browser-automation prototype |
+| `@google/genai` | Gemini embedding integration |
+| `gemini-embedding-001` | Semantic text embeddings |
+| HTTP/API integrations | Multi-provider job discovery |
+| `Promise.allSettled()` | Resilient parallel ingestion |
+| Tailwind CSS | Interface styling |
+| CSS and vector assets | Custom branding and visual identity |
 | CSV streaming | Exporting job recommendations |
+| Playwright | Initial browser-automation prototype |
 
 ---
 
@@ -326,9 +425,9 @@ The tree illustrates the logical module organization. Individual filenames and t
 ### Prerequisites
 
 - A supported Node.js installation.
-- npm or the package manager specified by the repository.
-- Network access to the configured job-provider APIs.
-- Provider credentials or configuration where required.
+- npm or the package manager configured for the repository.
+- Network access to the configured job providers.
+- A Google AI API key with access to the configured embedding model.
 
 ### Installation
 
@@ -345,23 +444,29 @@ Install dependencies:
 npm install
 ```
 
-Configure any provider credentials or environment variables required by the implementation.
+### Configure Environment Variables
 
-Start the application using the development or production script defined in `package.json`.
+Configure the Gemini API key and any provider settings required by the implementation.
+
+For example, if the application reads the standard Google GenAI environment variable:
+
+```dotenv
+GEMINI_API_KEY=your_api_key_here
+```
+
+Use the exact variable name expected by the current implementation. Do not commit real API keys, credentials, or `.env` files to GitHub.
+
+### Run the Application
+
+Start the application using the scripts configured in `package.json`.
+
+For example, if a development script is available:
 
 ```bash
 npm run dev
 ```
 
-The command above assumes the repository defines a `dev` script. If it does not, use the appropriate script from `package.json`.
-
-### Configuration
-
-Add an `.env.example` file documenting the environment variables actually consumed by the application.
-
-Keep secrets in a local `.env` file or deployment secret manager, and ensure `.env` is excluded from version control.
-
-**Important:** The exact environment variables, startup scripts, request payload, and response schema should be documented from the current implementation rather than assumed.
+Check the repository's `package.json` for the actual development and production commands.
 
 ---
 
@@ -369,21 +474,21 @@ Keep secrets in a local `.env` file or deployment secret manager, and ensure `.e
 
 ### `POST /api/match-jobs`
 
-The primary matching endpoint accepts a resume upload and returns relevant job recommendations.
+The primary matching endpoint accepts a resume upload and returns job recommendations.
 
-**Expected responsibilities:**
+Its responsibilities include:
 
-- Accept multipart form data.
-- Validate the uploaded PDF.
-- Parse candidate skills and experience.
-- Select the requested provider or providers.
-- Fetch, normalize, and deduplicate job listings.
-- Score jobs and generate explanations.
-- Return matching results.
+- Receiving and validating the uploaded PDF.
+- Extracting candidate skills and experience.
+- Querying selected job providers.
+- Normalizing and deduplicating job listings.
+- Generating embeddings where available.
+- Calculating hybrid relevance scores.
+- Producing match rationales.
+- Computing skill-gap insights.
+- Returning results to the client.
 
-The exact multipart field names, provider-selection parameter, response structure, and error codes depend on the current controller and route implementation.
-
-A complete API reference should include a real request example and representative response from the running application.
+The exact multipart field names, provider-selection parameters, response schema, and error codes should be documented from the current controller and route implementation.
 
 ---
 
@@ -391,69 +496,76 @@ A complete API reference should include a real request example and representativ
 
 AutoApply.AI is designed around ephemeral resume processing.
 
-The intended data flow avoids deliberately saving candidate resumes, extracted profiles, or tracking data to local files or a database.
+### Intended Data Flow
 
-### Current design
+- Uploaded PDFs are handled through `multer.memoryStorage()`.
+- Resume text and extracted profile information are processed in the active request workflow.
+- The described architecture does not require database persistence for candidate resumes.
+- Temporary files are not required by the in-memory PDF parsing pipeline.
 
-- PDF uploads are stored in memory using `multer.memoryStorage()`.
-- Resume text and extracted profile data are processed in the active application workflow.
-- The architecture does not require a database for candidate resume persistence.
-- Temporary files are not required for the described PDF parsing pipeline.
+### Production Considerations
 
-### Important implementation caveats
+In-memory processing does not guarantee immediate physical erasure. JavaScript garbage collection is nondeterministic, and sensitive information may remain in memory until reclaimed.
 
-In-memory processing is not, by itself, a guarantee that all candidate data is immediately erased.
+The Gemini integration also introduces an external service boundary. Resume-derived text sent for embedding generation is subject to the applicable Google API terms, data-handling policies, and configuration. Avoid sending unnecessary personally identifiable information to the embedding service; consider embedding only the skill and job-relevant text needed for matching.
 
-JavaScript garbage collection is nondeterministic. Data may remain in memory until reclaimed, and copies can exist in logs, exception reports, monitoring systems, or other application components if they are introduced.
+A production deployment should audit:
 
-A production deployment should also verify request logging, reverse-proxy behavior, error reporting, response caching, and infrastructure-level retention policies.
+- Request and error logging.
+- Reverse-proxy and monitoring retention.
+- Uploaded-file validation and size limits.
+- API-key management.
+- External API data handling.
+- Rate limits, timeouts, and retry behavior.
+- Any caching or persistence introduced in future versions.
 
 ---
 
 ## Engineering Challenges
 
-The project involved several practical engineering problems and corresponding architectural improvements.
-
-| Challenge | Root cause | Resolution |
-|---|---|---|
-| Browser automation timeouts | Fragile DOM selectors and insufficient wait times | Corrected selectors and improved timeout handling |
-| Cloudflare challenge loops | Browser automation exposed to anti-bot checks | Pivoted toward API-driven ingestion |
-| Missing Node.js globals in TypeScript | Incomplete compiler and type configuration | Configured `tsconfig.json` and Node.js type definitions |
-| `pdf-parse` runtime errors | Breaking API changes in v2.x | Migrated to the `PDFParse` class API |
-| PowerShell cURL incompatibility | `curl` alias and shell-specific syntax | Used `curl.exe` and PowerShell line continuations |
-| Empty Hirist search results | Restrictive query parameters | Simplified search parameters and encoding |
-| No results for freshers | Strict experience filtering | Added `strict`, `moderate`, and `any` tolerance modes |
-| Skill alias mismatches | Rigid string comparison | Added normalization and compound-skill inference |
-| TypeScript `Map` overload errors | Incorrect generic inference | Explicitly typed the provider map |
-| Irrelevant jobs receiving high scores | Default mandatory-score behavior | Added a zero-match circuit breaker |
-| Undefined tag errors | Inconsistent provider response data | Added input validation and tag sanitization |
-
-These issues informed the current separation between provider-specific ingestion and a shared matching engine.
+| Challenge | Resolution |
+|---|---|
+| Browser automation timeouts | Corrected selectors and improved timeout handling |
+| Cloudflare challenge loops | Pivoted toward API-driven job ingestion |
+| Missing Node.js globals | Configured TypeScript and Node.js type definitions |
+| `pdf-parse` v2.x API changes | Migrated to the `PDFParse` class interface |
+| PowerShell cURL incompatibility | Used `curl.exe` and PowerShell-compatible syntax |
+| Empty Hirist search results | Simplified restrictive query parameters |
+| Freshers receiving no matches | Added experience-tolerance modes |
+| Skill alias mismatches | Implemented skill normalization and compound-skill inference |
+| TypeScript `Map` overload errors | Explicitly typed the provider registry |
+| Irrelevant jobs receiving high scores | Added a zero-match circuit breaker and description scanning |
+| Malformed provider tags | Hardened normalization and input validation |
+| CommonJS and ESM compatibility | Introduced dynamic ESM imports for the Google GenAI SDK |
+| Excessive embedding request overhead | Batched content through the embedding request workflow |
+| Semantic API failures | Added a lexical-heuristic fallback path |
+| Opaque match percentages | Added weighted score breakdowns and tailored rationales |
+| Limited candidate guidance | Introduced SkillGapService for market-informed skill-gap analysis |
+| Inconsistent interface appearance | Added persistent dark/light themes and system-preference detection |
 
 ---
 
-## Limitations and Future Improvements
+## Future Improvements
 
-Potential next steps include:
-
-- [ ] Add comprehensive unit and integration tests for resume parsing and scoring.
-- [ ] Add provider-specific timeout, retry, and rate-limit policies.
-- [ ] Validate and document the complete API contract.
-- [ ] Improve skill extraction using a maintained skill taxonomy and alias dictionary.
-- [ ] Evaluate ranking quality against manually reviewed candidate-job pairs.
-- [ ] Add configurable weights and explainable score breakdowns.
-- [ ] Improve extraction of salary, location, remote status, and employment type.
+- [ ] Add unit and integration tests for lexical and semantic scoring.
+- [ ] Evaluate ranking quality against manually reviewed job-candidate pairs.
+- [ ] Calibrate cosine similarity and keyword scores using representative datasets.
+- [ ] Add configurable scoring weights and detailed score diagnostics.
+- [ ] Improve skill taxonomy coverage and alias resolution.
+- [ ] Rank skill gaps by frequency, relevance, and candidate career goals.
+- [ ] Add provider-specific retry, timeout, and rate-limit policies.
+- [ ] Add embedding caching only where compatible with privacy requirements.
 - [ ] Add containerization and deployment configuration.
-- [ ] Introduce structured operational metrics without logging sensitive resume content.
-- [ ] Audit privacy, upload limits, file validation, and error-handling paths.
-- [ ] Verify provider API permissions, terms, and long-term endpoint stability.
+- [ ] Expand API documentation with real request and response examples.
+- [ ] Audit privacy, upload validation, and external API data handling.
+- [ ] Verify job-provider terms, endpoint stability, and API permissions.
 
 ---
 
 ## License
 
-Add the license appropriate for this repository. If you intend to make the project open source, consider including a `LICENSE` file and specifying the chosen license here.
+Add a `LICENSE` file and specify the selected license before publishing the repository as an open-source project.
 
 ---
 
-**AutoApply.AI** — Making job discovery more targeted, transparent, and efficient.
+**AutoApply.AI** — Discover relevant opportunities. Understand your match. Identify your next skill to learn.
