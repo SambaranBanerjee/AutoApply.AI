@@ -8,6 +8,25 @@ export interface SkillGapInsight {
 }
 
 export class SkillGapService {
+  /**
+   * Safely normalizes a tag whether it's a string, an object { name: "..." }, or malformed.
+   */
+  private static extractTagString(tag: any): string | null {
+    if (!tag) return null;
+    if (typeof tag === "string") {
+      const clean = tag.trim();
+      return clean.length > 0 ? clean : null;
+    }
+    if (typeof tag === "object" && typeof tag.name === "string") {
+      const clean = tag.name.trim();
+      return clean.length > 0 ? clean : null;
+    }
+    return null;
+  }
+
+  /**
+   * Analyzes all fetched jobs against user skills to compute the most impactful missing skills.
+   */
   static analyze(
     jobs: StandardJob[],
     userSkills: string[],
@@ -16,22 +35,30 @@ export class SkillGapService {
     if (!jobs || jobs.length === 0) return [];
 
     const userSkillSet = new Set(
-      userSkills.map((s) => s.trim().toLowerCase())
+      (userSkills || [])
+        .filter((s) => typeof s === "string")
+        .map((s) => s.trim().toLowerCase())
     );
+
     const missingCounts = new Map<string, number>();
     let totalOpportunities = 0;
 
     for (const job of jobs) {
-      if (!job.tags || job.tags.length === 0) continue;
+      if (!job || !Array.isArray(job.tags) || job.tags.length === 0) continue;
+
+      // Extract valid string names safely
+      const validJobSkills = job.tags
+        .map(this.extractTagString)
+        .filter((t): t is string => Boolean(t));
+
+      if (validJobSkills.length === 0) continue;
+
       totalOpportunities++;
+      const uniqueJobSkills = Array.from(new Set(validJobSkills));
 
-      const jobSkillNames = Array.from(
-        new Set(job.tags.map((t) => t.name.trim()))
-      );
-
-      for (const skillName of jobSkillNames) {
+      for (const skillName of uniqueJobSkills) {
         const lower = skillName.toLowerCase();
-        // Ignore generic words or skills already present on the resume
+        // Skip generic tokens or skills the applicant already has
         if (
           userSkillSet.has(lower) ||
           lower === "it" ||
@@ -49,6 +76,7 @@ export class SkillGapService {
 
     if (totalOpportunities === 0) return [];
 
+    // Rank descending by count
     const sorted = Array.from(missingCounts.entries()).sort(
       (a, b) => b[1] - a[1]
     );

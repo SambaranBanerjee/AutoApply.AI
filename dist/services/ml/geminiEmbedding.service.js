@@ -8,7 +8,6 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 class GeminiEmbeddingService {
     static ai = null;
-    // Standard embedding identifier for Google GenAI v1beta
     static modelName = "gemini-embedding-001";
     static async getClient() {
         const apiKey = process.env.GEMINI_API_KEY;
@@ -28,14 +27,31 @@ class GeminiEmbeddingService {
         return this.ai;
     }
     /**
+     * Sanitizes raw resume or job text by removing control characters,
+     * non-standard bullet symbols, and excessive whitespace.
+     */
+    static sanitize(text, maxLength) {
+        if (!text)
+            return "";
+        return text
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, " ")
+            .replace(/[•●\u2022\u25E6\u2023\u25CF\u25CB]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, maxLength);
+    }
+    /**
      * Generates a dense embedding vector for a single text string.
      */
     static async getSingleEmbedding(text) {
         try {
             const ai = await this.getClient();
-            if (!ai || !ai.models)
+            if (!ai || !ai.models) {
                 return null;
-            const sanitized = text.replace(/\s+/g, " ").trim().slice(0, 2000);
+            }
+            const sanitized = this.sanitize(text, 2048);
+            if (!sanitized)
+                return null;
             const response = await ai.models.embedContent({
                 model: this.modelName,
                 contents: sanitized,
@@ -51,14 +67,15 @@ class GeminiEmbeddingService {
      * Batch embeds candidate job descriptions in 1 single HTTP request.
      */
     static async getBatchEmbeddings(texts) {
-        if (texts.length === 0)
+        if (!texts || texts.length === 0) {
             return [];
+        }
         try {
             const ai = await this.getClient();
             if (!ai || !ai.models) {
                 return texts.map(() => null);
             }
-            const sanitizedTexts = texts.map((t) => t.replace(/\s+/g, " ").trim().slice(0, 1000));
+            const sanitizedTexts = texts.map((t) => this.sanitize(t, 1024));
             const response = await ai.models.embedContent({
                 model: this.modelName,
                 contents: sanitizedTexts,
@@ -66,7 +83,7 @@ class GeminiEmbeddingService {
             if (!response.embeddings || response.embeddings.length === 0) {
                 return texts.map(() => null);
             }
-            return response.embeddings.map((e) => e.values || null);
+            return response.embeddings.map((e) => e?.values || null);
         }
         catch (err) {
             console.warn("[GeminiEmbeddingService] Batch embed error, falling back to lexical:", err.message);
@@ -92,6 +109,9 @@ class GeminiEmbeddingService {
             return 0;
         }
         const similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        if (isNaN(similarity) || !isFinite(similarity)) {
+            return 0;
+        }
         return Math.max(0, Math.min(1, similarity));
     }
 }
