@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tc_001_backend_node",
+    "resume": "Experienced Node.js and TypeScript backend engineer with 3 years building REST APIs, Fastify, and PostgreSQL services.",
+    "job_description": "Looking for a Senior Backend Developer proficient in Node.js, TypeScript, Fastify, and PostgreSQL database management.",
+    "expected_min_score": 85
+  },
+  {
+    "id": "tc_002_mismatched_stack",
+    "resume": "Frontend React developer focusing on Tailwind CSS, Next.js, UI/UX design, and mobile app development with React Native.",
+    "job_description": "Seeking a low-level C++ systems engineer experienced with CUDA, OpenCV, CMake, and memory management.",
+    "expected_max_score": 40
+  }
+]

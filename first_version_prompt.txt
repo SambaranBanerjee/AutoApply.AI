@@ -1,0 +1,9 @@
+Look at this resume and this job description. Tell me how good of a match the candidate is. 
+
+Job Description:
+{JOB_DESCRIPTION}
+
+Resume:
+{RESUME_TEXT}
+
+Give me a score out of 100, tell me what skills they have that match, what they are missing, and write a short summary of why they are or aren't a good fit.
